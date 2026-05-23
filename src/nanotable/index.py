@@ -33,7 +33,8 @@ class UniqueIndex[Key, Elem]:
         self.sentinel = object() if none_as_value else None
         self.required = required
     
-    def add(self, elem: Elem, *, getfield: FieldGetter[Elem, Key] = getattr):
+    # TODO: Store getfield as a member
+    def add(self, elem: Elem, *, getfield: FieldGetter[Elem, Key]):
         """
         Adds an element to the index.
         
@@ -56,7 +57,7 @@ class UniqueIndex[Key, Elem]:
         
         self._lookup[key] = elem
     
-    def discard(self, elem: Elem, *, missing_ok: bool = False):
+    def remove(self, elem: Elem, *, missing_ok: bool = False, getfield: FieldGetter[Elem, Key]):
         """
         Removes an element from the index.
         
@@ -67,7 +68,7 @@ class UniqueIndex[Key, Elem]:
         :raises KeyError: If `missing_ok` is `False` and the element does not exist in the index.
         """
         
-        key = getattr(elem, self.key_field, self.sentinel)
+        key = getfield(elem, self.key_field, self.sentinel)
         
         if key is self.sentinel:
             if self.required:
