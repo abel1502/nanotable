@@ -1,0 +1,66 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "nanotable"
+dynamic = ["version"]
+description = 'More than a collection, less than a database'
+readme = "README.md"
+requires-python = ">=3.12"
+license = "MIT"
+license-files = ["LICENSE.txt"]
+keywords = [
+  "database", "table", "collection", "storage",
+]
+authors = [
+  { name = "abel1502" },
+]
+classifiers = [
+  "Development Status :: 4 - Beta",
+  "Programming Language :: Python",
+  "Programming Language :: Python :: 3.12",
+  "Programming Language :: Python :: 3.13",
+  "Programming Language :: Python :: 3.14",
+  "Topic :: Database",
+  "Intended Audience :: Developers",
+  "Typing :: Typed",
+]
+dependencies = []
+
+[project.urls]
+Documentation = "https://github.com/abel1502/nanotable#readme"
+Issues = "https://github.com/abel1502/nanotable/issues"
+Source = "https://github.com/abel1502/nanotable"
+
+[tool.hatch.version]
+path = "src/nanotable/__about__.py"
+
+[tool.hatch.build]
+reproducible = false
+
+[tool.hatch.envs.types]
+extra-dependencies = [
+  "mypy>=1.0.0",
+]
+[tool.hatch.envs.types.scripts]
+check = "mypy --install-types --non-interactive {args:src/nanotable tests}"
+
+[tool.coverage.run]
+source_pkgs = ["nanotable", "tests"]
+branch = true
+parallel = true
+omit = [
+  "src/nanotable/__about__.py",
+]
+
+[tool.coverage.paths]
+nanotable = ["src/nanotable", "*/nanotable/src/nanotable"]
+tests = ["tests", "*/nanotable/tests"]
+
+[tool.coverage.report]
+exclude_lines = [
+  "no cov",
+  "if __name__ == .__main__.:",
+  "if TYPE_CHECKING:",
+]
