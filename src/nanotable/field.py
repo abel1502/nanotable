@@ -2,7 +2,7 @@ from __future__ import annotations
 import typing
 
 
-class FieldGetter[Obj, Field](typing.Protocol):
+class FieldGetter[Obj, Field](typing.Protocol):  # no cov
     """
     Signature: `(obj: Obj, key: str, default: Default) -> Field | Default`
     
@@ -20,7 +20,17 @@ class FieldGetter[Obj, Field](typing.Protocol):
         ...
 
 
+def attr_getter[Obj, Field, Default](obj: Obj, key: str, default: Default) -> Field | Default:
+    return getattr(obj, key, default)
+
+
+def dict_getter[Field, Default](obj: dict[str, Field], key: str, default: Default) -> Field | Default:
+    return obj.get(key, default)
+
+
 __all__ = [
     "FieldGetter",
+    "attr_getter",
+    "dict_getter",
 ]
 
