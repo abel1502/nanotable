@@ -44,7 +44,7 @@ class MyError(Exception):
     pass
 
 
-def test_explicit_rollback(mocker: MockerFixture):
+def test_auto_rollback(mocker: MockerFixture):
     cb = mocker.stub(name="undo function")
     
     with pytest.raises(MyError):
