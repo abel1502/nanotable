@@ -34,12 +34,12 @@ class Transaction:
     state (all undo steps are discarded) and can be used again.
     """
     
-    _current: typing.ClassVar[ContextVar[Transaction]] = ContextVar("nanotable.Transaction._current")
+    __slots__ = ("_stack",)
     
-    _undo: list[typing.Callable[[]]]
+    _stack: list[typing.Callable[[]]]
     
     def __init__(self):
-        self._undo = []
+        self._stack = []
     
     def __enter__(self) -> Transaction:
         return self
@@ -57,7 +57,7 @@ class Transaction:
         :param handler: The callback undoing the preceding operation
         """
         
-        self._undo.append(handler)
+        self._stack.append(handler)
     
     def commit(self):
         """
@@ -67,7 +67,7 @@ class Transaction:
         can be used again after this.
         """
         
-        self._undo = []
+        self._stack = []
 
     def rollback(self):
         """
@@ -79,8 +79,8 @@ class Transaction:
         
         errors: list[Exception] = []
         
-        while self._undo:
-            handler = self._undo.pop()
+        while self._stack:
+            handler = self._stack.pop()
             
             try:
                 handler()
