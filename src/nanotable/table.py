@@ -22,6 +22,8 @@ class Table[Elem, Indexes = _IndexDirectoryProxy[Elem]]:
     by: Indexes
     
     # TODO: Dedicated primary index, which could let us get rid of a contents list.
+    # TODO: Construct from initial elements? Maybe not, if we want to build the "schema" first...
+    # TODO: Maybe replace `getfield` with `store_mappings` and `store_objects`? If both, pick depending on `isinstance(..., typing.Mapping)`
     def __init__(self, getfield: FieldGetter[Elem]):
         self._contents = []
         self._getfield = getfield
@@ -57,7 +59,7 @@ class Table[Elem, Indexes = _IndexDirectoryProxy[Elem]]:
         for index in self._indexes.values():
             index.unregister(self._getfield(elem), elem)
     
-    # TODO: Also need to issue warnings when changes in indexed attributes are detected!
+    # TODO: Also need to issue warnings when changes in indexed attributes are detected! Check when using an index and in a table's `__del__`
     # And document that they are supposed to be immutable except with `rekey`.
     @contextmanager
     def rekey(self, obj: Elem) -> typing.Generator[None, None, None]:
@@ -83,6 +85,7 @@ class _IndexDirectoryProxy[Elem]:
         return _IndexProxy(self.table, index)
 
 
+# TODO: Remove, just expose the index itself?
 class _IndexProxy[Elem]:
     __slots__ = ("table", "index")
     
