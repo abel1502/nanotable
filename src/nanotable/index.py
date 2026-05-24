@@ -4,7 +4,8 @@ import typing
 from nanotable.field import FieldGetter, MISSING, typeof_MISSING
 
 
-class UniqueIndex[Obj, Key = typing.Any]:
+# TODO: Rename to just Index
+class UniqueIndex[Obj, Key = typing.Any](typing.Mapping[Key, Obj]):
     """
     A unique index lets you look up the single element with a certain value of the `key_field` attribute.
     """
@@ -116,6 +117,15 @@ class UniqueIndex[Obj, Key = typing.Any]:
             raise KeyError(f"Key {key!r} not found in index by {self.key_field!r}")
         
         return result
+
+    def __getitem__(self, key: Key) -> Obj:
+        return self.get(key)
+    
+    def __len__(self) -> int:
+        return len(self._lookup)
+    
+    def __iter__(self) -> typing.Iterator[Key]:
+        return iter(self._lookup)
 
 
 __all__ = [
