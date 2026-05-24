@@ -19,8 +19,30 @@ pip install nanotable
 
 ## Usage
 
-TODO
+A basic usage example is given below:
+
+```python
+from nanotable import Table, dict_getter
+
+table = Table(getfield=dict_getter).index_on("name").index_on("phone", required=False)
+
+table.add({"name": "John Doe", "phone": "123-456-7890", "age": 25})
+table.add({"name": "Jane Doe", "phone": "987-654-3210", "age": 26})
+table.add({"name": "Barrack Obama", "age": "idk"})
+
+table.by.name["John Doe"]  # {"name": "John Doe", "phone": "123-456-7890", "age": 25}
+table.by.phone["987-654-3210"]  # {"name": "Jane Doe", "phone": "987-654-3210", "age": 26}
+
+table.remove(table.by.name["Barrack Obama"])
+```
+
+TODO: typed example
+
+TODO: warn about mutation and `rekey`
 
 ## License
 
 `nanotable` is distributed under the terms of the [MIT](https://spdx.org/licenses/MIT.html) license.
+See the [LICENSE.txt](LICENSE.txt) for details.
+
+© 2026 abel1502
