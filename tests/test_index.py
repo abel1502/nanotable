@@ -8,7 +8,7 @@ from nanotable.field import dict_getter
 
 
 def test_normal():
-    index: UniqueIndex[int, typing.Any] = UniqueIndex("id")
+    index: UniqueIndex[int] = UniqueIndex("id")
     
     obj1 = {"id": 1, "other": "foo"}
     obj2 = {"id": 2, "other": "bar"}
@@ -52,7 +52,7 @@ def test_normal():
 
 
 def test_none_valued():
-    index: UniqueIndex[int, typing.Any] = UniqueIndex("id", none_as_value=True)
+    index: UniqueIndex[int] = UniqueIndex("id", none_as_value=True)
     
     obj = {"id": None, "other": "foo"}
     
@@ -68,7 +68,7 @@ def test_none_valued():
 
 
 def test_optional():
-    index: UniqueIndex[int, typing.Any] = UniqueIndex("id", required=False)
+    index: UniqueIndex[int] = UniqueIndex("id", required=False)
     
     obj1 = {"id": 1, "other": "foo"}
     obj2 = {"other": "bar"}
@@ -89,7 +89,7 @@ def test_optional():
 
 
 def test_optional_none_valued():
-    index: UniqueIndex[int, typing.Any] = UniqueIndex("id", required=False, none_as_value=True)
+    index: UniqueIndex[int] = UniqueIndex("id", required=False, none_as_value=True)
     
     obj1 = {"id": 1, "other": "foo"}
     obj2 = {"other": "bar"}
@@ -109,7 +109,7 @@ def test_optional_none_valued():
 
 
 def test_get_overloads():
-    index: UniqueIndex[int, typing.Any] = UniqueIndex("id")
+    index: UniqueIndex[int] = UniqueIndex("id")
     
     obj = {"id": 1}
     index.add(obj, getfield=dict_getter)

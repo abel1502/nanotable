@@ -10,10 +10,10 @@ class Table[Elem]:
     __slots__ = ("contents", "indexes")
     
     contents: list[Elem]
-    getfield: FieldGetter[Elem, typing.Any]
-    indexes: dict[str, UniqueIndex[typing.Any, Elem]]  # TODO: The generic-ness is maybe excessive. Assume keys to always be Any?
+    getfield: FieldGetter[Elem]
+    indexes: dict[str, UniqueIndex[Elem]]
     
-    def __init__(self, getfield: FieldGetter[Elem, typing.Any]):
+    def __init__(self, getfield: FieldGetter[Elem]):
         self.contents = []
         self.getfield = getfield
         self.indexes = {}
@@ -48,7 +48,7 @@ class _IndexDirectoryProxy[Elem]:
     def __init__(self, table: Table[Elem]):
         self.table = table
     
-    def __getattr__(self, name: str) -> _IndexProxy[typing.Any, Elem]:
+    def __getattr__(self, name: str) -> _IndexProxy[Elem]:
         index = self.table.indexes.get(name, None)
         
         if index is None:
@@ -57,25 +57,25 @@ class _IndexDirectoryProxy[Elem]:
         return _IndexProxy(self.table, index)
 
 
-class _IndexProxy[Key, Elem]:
+class _IndexProxy[Elem]:
     __slots__ = ("table", "index")
     
     table: Table[Elem]
-    index: UniqueIndex[Key, Elem]
+    index: UniqueIndex[Elem]
     
     def __init__(
         self,
         table: Table[Elem],
-        index: UniqueIndex[Key, Elem],
+        index: UniqueIndex[Elem],
     ):
         self.table = table
         self.index = index
     
-    def __getitem__(self, key: Key) -> Elem:
+    def __getitem__(self, key: typing.Any) -> Elem:
         return self.index.get(key)
     
-    def get[Default](self, key: Key, default: Default) -> Elem | Default:
+    def get[Default](self, key: typing.Any, default: Default) -> Elem | Default:
         return self.index.get(key, default)
 
-    def __delitem__(self, key: Key):
+    def __delitem__(self, key: typing.Any):
         self.table.remove(key)

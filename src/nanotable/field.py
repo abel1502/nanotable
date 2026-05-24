@@ -3,7 +3,7 @@ import typing
 
 
 # TODO: Replace with a more general "object kind descriptor"?
-class FieldGetter[Obj, Field](typing.Protocol):  # no cov
+class FieldGetter[Obj](typing.Protocol):  # no cov
     """
     Signature: `(obj: Obj, key: str, default: Default) -> Field | Default`
     
@@ -17,15 +17,15 @@ class FieldGetter[Obj, Field](typing.Protocol):  # no cov
         obj: Obj,
         key: str,
         default: Default,
-    ) -> Field | Default:
+    ) -> typing.Any | Default:
         ...
 
 
-def attr_getter[Obj, Field, Default](obj: Obj, key: str, default: Default) -> Field | Default:
+def attr_getter[Obj, Default](obj: Obj, key: str, default: Default) -> typing.Any | Default:
     return getattr(obj, key, default)
 
 
-def dict_getter[Field, Default](obj: dict[str, Field], key: str, default: Default) -> Field | Default:
+def dict_getter[Default](obj: dict[str, typing.Any], key: str, default: Default) -> typing.Any | Default:
     return obj.get(key, default)
 
 

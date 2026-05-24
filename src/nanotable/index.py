@@ -5,14 +5,14 @@ if typing.TYPE_CHECKING:
     from nanotable.field import FieldGetter
 
 
-class UniqueIndex[Key, Elem]:
+class UniqueIndex[Elem]:
     """
     A unique index lets you look up the single element with a certain value of the `key_field` attribute.
     """
     
     __slots__ = ("_lookup", "key_field", "sentinel", "required")
     
-    _lookup: dict[Key, Elem]
+    _lookup: dict[Elem]
     key_field: str
     sentinel: object
     required: bool
@@ -34,7 +34,7 @@ class UniqueIndex[Key, Elem]:
         self.required = required
     
     # TODO: Store getfield as a member
-    def add(self, elem: Elem, *, getfield: FieldGetter[Elem, Key]):
+    def add(self, elem: Elem, *, getfield: FieldGetter[Elem]):
         """
         Adds an element to the index.
         
@@ -57,7 +57,7 @@ class UniqueIndex[Key, Elem]:
         
         self._lookup[key] = elem
     
-    def remove(self, elem: Elem, *, missing_ok: bool = False, getfield: FieldGetter[Elem, Key]):
+    def remove(self, elem: Elem, *, missing_ok: bool = False, getfield: FieldGetter[Elem]):
         """
         Removes an element from the index.
         
@@ -81,7 +81,7 @@ class UniqueIndex[Key, Elem]:
         self._lookup.pop(key, None)
     
     @typing.overload
-    def get(self, key: Key, /) -> Elem:
+    def get(self, key: typing.Any, /) -> Elem:
         """
         Returns the element with the given key.
         
@@ -91,7 +91,7 @@ class UniqueIndex[Key, Elem]:
         """
     
     @typing.overload
-    def get[Default](self, key: Key, default: Default, /) -> Elem | Default:
+    def get[Default](self, key: typing.Any, default: Default, /) -> Elem | Default:
         """
         Returns the element with the given key, or `default` if the key is not found in the index.
         
@@ -99,7 +99,7 @@ class UniqueIndex[Key, Elem]:
         :param default: The value to return if the key is not found in the index.
         """
     
-    def get(self, key: Key, *args):
+    def get(self, key: typing.Any, *args):
         if len(args) == 1:
             return self._lookup.get(key, args[0])
         
