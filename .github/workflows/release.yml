@@ -36,7 +36,7 @@ jobs:
         run: uvx hatch test -py 3.13,3.14
 
       - name: Type-check
-        run: uvx hatch run type:check
+        run: uvx hatch run types:check
 
   publish:
     name: Build and publish
