@@ -1,19 +1,19 @@
 from __future__ import annotations
 import typing
 
-from nanotable.field import FieldGetter, MISSING
+from nanotable.field import FieldGetter, MISSING, typeof_MISSING
 
 
-class UniqueIndex[Elem]:
+class UniqueIndex[Obj, Key = typing.Any]:
     """
     A unique index lets you look up the single element with a certain value of the `key_field` attribute.
     """
     
     __slots__ = ("_lookup", "key_field", "sentinel", "required")
     
-    _lookup: dict[typing.Any, Elem]
+    _lookup: dict[Key, Obj]
     key_field: str
-    sentinel: object
+    sentinel: typing.Any
     required: bool
     
     def __init__(self, key_field: str, *, none_as_value: bool = False, required: bool = True):
@@ -32,8 +32,7 @@ class UniqueIndex[Elem]:
         self.sentinel = object() if none_as_value else None
         self.required = required
     
-    # TODO: Store getfield as a member
-    def add(self, elem: Elem, *, getfield: FieldGetter[Elem]) -> None:
+    def register(self, key: Key | typeof_MISSING, elem: Obj) -> None:
         """
         Adds an element to the index.
         
@@ -44,7 +43,6 @@ class UniqueIndex[Elem]:
         :raises KeyError: If the element already exists in the index.
         """
         
-        key = getfield(elem, self.key_field)
         if key is MISSING:
             key = self.sentinel
         
@@ -52,13 +50,15 @@ class UniqueIndex[Elem]:
             if self.required:
                 raise ValueError(f"Element {elem!r} has no {self.key_field!r} field which is required")
             return
+        
+        key = typing.cast(Key, key)
 
         if key in self._lookup:
             raise KeyError(f"Key {key!r} already exists in index by {self.key_field!r}")
         
         self._lookup[key] = elem
     
-    def remove(self, elem: Elem, *, missing_ok: bool = False, getfield: FieldGetter[Elem]) -> None:
+    def unregister(self, key: Key | typeof_MISSING, elem: Obj, *, missing_ok: bool = False) -> None:
         """
         Removes an element from the index.
         
@@ -69,7 +69,6 @@ class UniqueIndex[Elem]:
         :raises KeyError: If `missing_ok` is `False` and the element does not exist in the index.
         """
         
-        key = getfield(elem, self.key_field)
         if key is MISSING:
             key = self.sentinel
         
@@ -78,13 +77,15 @@ class UniqueIndex[Elem]:
                 raise ValueError(f"Element {elem!r} has no {self.key_field!r} field which is required")
             return
         
+        key = typing.cast(Key, key)
+        
         if not missing_ok and key not in self._lookup:
             raise KeyError(f"Key {key!r} not found in index by {self.key_field!r}")
         
         self._lookup.pop(key, None)
     
     @typing.overload
-    def get(self, key: typing.Any, /) -> Elem:
+    def get(self, key: typing.Any, /) -> Obj:
         """
         Returns the element with the given key.
         
@@ -94,7 +95,7 @@ class UniqueIndex[Elem]:
         """
     
     @typing.overload
-    def get[Default](self, key: typing.Any, default: Default, /) -> Elem | Default:
+    def get[Default](self, key: typing.Any, default: Default, /) -> Obj | Default:
         """
         Returns the element with the given key, or `default` if the key is not found in the index.
         
