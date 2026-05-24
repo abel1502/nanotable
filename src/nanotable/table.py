@@ -11,12 +11,14 @@ class Table[Elem]:
     
     contents: list[Elem]
     getfield: FieldGetter[Elem, typing.Any]
-    indexes: dict[str, UniqueIndex[typing.Any, Elem]]
+    indexes: dict[str, UniqueIndex[typing.Any, Elem]]  # TODO: The generic-ness is maybe excessive. Assume keys to always be Any?
     
     def __init__(self, getfield: FieldGetter[Elem, typing.Any]):
         self.contents = []
         self.getfield = getfield
         self.indexes = {}
+    
+    # TODO: Create index
     
     @property
     def by(self) -> _IndexDirectoryProxy[Elem]:
@@ -60,17 +62,14 @@ class _IndexProxy[Key, Elem]:
     
     table: Table[Elem]
     index: UniqueIndex[Key, Elem]
-    getfield: FieldGetter[Elem, typing.Any]
     
     def __init__(
         self,
         table: Table[Elem],
         index: UniqueIndex[Key, Elem],
-        getfield: FieldGetter[Elem, typing.Any],
     ):
         self.table = table
         self.index = index
-        self.getfield = getfield
     
     def __getitem__(self, key: Key) -> Elem:
         return self.index.get(key)

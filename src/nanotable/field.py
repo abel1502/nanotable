@@ -2,6 +2,7 @@ from __future__ import annotations
 import typing
 
 
+# TODO: Replace with a more general "object kind descriptor"?
 class FieldGetter[Obj, Field](typing.Protocol):  # no cov
     """
     Signature: `(obj: Obj, key: str, default: Default) -> Field | Default`
