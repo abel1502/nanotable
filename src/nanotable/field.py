@@ -1,35 +1,29 @@
 from __future__ import annotations
 import typing
+import enum
 
 
-# TODO: Replace with a more general "object kind descriptor"?
-class FieldGetter[Obj](typing.Protocol):  # no cov
-    """
-    Signature: `(obj: Obj, key: str, default: Default) -> Field | Default`
-    
-    Retrieves the field `key` of type `Field` from `obj` of type `Obj`, or returns the `default` value.
-
-    Shouldn't raise any exceptions under normal conditions.
-    """
-    
-    def __call__[Default](
-        self,
-        obj: Obj,
-        key: str,
-        default: Default,
-    ) -> typing.Any | Default:
-        ...
+# Apparently the best way to keep the type checker happy until 3.15 and standard library `sentinel`
+class Missing(enum.Enum):
+    MISSING = 0
 
 
-def attr_getter[Obj, Default](obj: Obj, key: str, default: Default) -> typing.Any | Default:
-    return getattr(obj, key, default)
+MISSING = Missing.MISSING
 
 
-def dict_getter[Default](obj: dict[str, typing.Any], key: str, default: Default) -> typing.Any | Default:
-    return obj.get(key, default)
+type FieldGetter[Obj] = typing.Callable[[Obj, str], typing.Any | type[Missing]]
+
+
+def attr_getter(obj: object, key: str) -> typing.Any | type[Missing]:
+    return getattr(obj, key, MISSING)
+
+
+def dict_getter(obj: dict[str, typing.Any], key: str) -> typing.Any | type[Missing]:
+    return obj.get(key, MISSING)
 
 
 __all__ = [
+    "MISSING",
     "FieldGetter",
     "attr_getter",
     "dict_getter",

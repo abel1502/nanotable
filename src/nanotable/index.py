@@ -1,8 +1,7 @@
 from __future__ import annotations
 import typing
 
-if typing.TYPE_CHECKING:
-    from nanotable.field import FieldGetter
+from nanotable.field import FieldGetter, MISSING
 
 
 class UniqueIndex[Elem]:
@@ -12,7 +11,7 @@ class UniqueIndex[Elem]:
     
     __slots__ = ("_lookup", "key_field", "sentinel", "required")
     
-    _lookup: dict[Elem]
+    _lookup: dict[typing.Any, Elem]
     key_field: str
     sentinel: object
     required: bool
@@ -34,7 +33,7 @@ class UniqueIndex[Elem]:
         self.required = required
     
     # TODO: Store getfield as a member
-    def add(self, elem: Elem, *, getfield: FieldGetter[Elem]):
+    def add(self, elem: Elem, *, getfield: FieldGetter[Elem]) -> None:
         """
         Adds an element to the index.
         
@@ -45,7 +44,9 @@ class UniqueIndex[Elem]:
         :raises KeyError: If the element already exists in the index.
         """
         
-        key = getfield(elem, self.key_field, self.sentinel)
+        key = getfield(elem, self.key_field)
+        if key is MISSING:
+            key = self.sentinel
         
         if key is self.sentinel:
             if self.required:
@@ -57,7 +58,7 @@ class UniqueIndex[Elem]:
         
         self._lookup[key] = elem
     
-    def remove(self, elem: Elem, *, missing_ok: bool = False, getfield: FieldGetter[Elem]):
+    def remove(self, elem: Elem, *, missing_ok: bool = False, getfield: FieldGetter[Elem]) -> None:
         """
         Removes an element from the index.
         
@@ -68,7 +69,9 @@ class UniqueIndex[Elem]:
         :raises KeyError: If `missing_ok` is `False` and the element does not exist in the index.
         """
         
-        key = getfield(elem, self.key_field, self.sentinel)
+        key = getfield(elem, self.key_field)
+        if key is MISSING:
+            key = self.sentinel
         
         if key is self.sentinel:
             if self.required:
@@ -99,7 +102,7 @@ class UniqueIndex[Elem]:
         :param default: The value to return if the key is not found in the index.
         """
     
-    def get(self, key: typing.Any, *args):
+    def get(self, key, *args):
         if len(args) == 1:
             return self._lookup.get(key, args[0])
         

@@ -36,7 +36,7 @@ class Transaction:
     
     __slots__ = ("_stack",)
     
-    _stack: list[typing.Callable[[]]]
+    _stack: list[typing.Callable]
     
     def __init__(self):
         self._stack = []
@@ -50,16 +50,17 @@ class Transaction:
         else:
             self.rollback()
     
-    def add_undo(self, handler: typing.Callable[[]]):
+    def add_undo(self, handler: typing.Callable) -> None:
         """
         Push a new step to the undo stack
         
-        :param handler: The callback undoing the preceding operation
+        :param handler: The callback undoing the preceding operation.
+            It should be callable with no arguments.
         """
         
         self._stack.append(handler)
     
-    def commit(self):
+    def commit(self) -> None:
         """
         Closes the transaction as successful.
         
@@ -69,7 +70,7 @@ class Transaction:
         
         self._stack = []
 
-    def rollback(self):
+    def rollback(self) -> None:
         """
         Closes the transaction as failed.
         

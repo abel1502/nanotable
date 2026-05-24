@@ -7,7 +7,7 @@ from pytest_mock import MockerFixture
 from nanotable.transaction import Transaction
 
 
-def test_explicit_commit():
+def test_explicit_commit() -> None:
     with Transaction() as tx:
         tx.add_undo(lambda: pytest.fail("undo function was called"))
         tx.commit()
@@ -15,21 +15,21 @@ def test_explicit_commit():
     assert not tx._stack
 
 
-def test_implicit_commit():
+def test_implicit_commit() -> None:
     with Transaction() as tx:
         tx.add_undo(lambda: pytest.fail("undo function was called"))
 
     assert not tx._stack
 
 
-def test_empty():
+def test_empty() -> None:
     with Transaction() as tx:
         pass
     
     assert not tx._stack
 
 
-def test_explicit_rollback(mocker: MockerFixture):
+def test_explicit_rollback(mocker: MockerFixture) -> None:
     cb = mocker.stub(name="undo function")
     
     with Transaction() as tx:
@@ -44,7 +44,7 @@ class MyError(Exception):
     pass
 
 
-def test_auto_rollback(mocker: MockerFixture):
+def test_auto_rollback(mocker: MockerFixture) -> None:
     cb = mocker.stub(name="undo function")
     
     with pytest.raises(MyError):
@@ -56,7 +56,7 @@ def test_auto_rollback(mocker: MockerFixture):
     assert not tx._stack
 
 
-def test_order(mocker: MockerFixture):
+def test_order(mocker: MockerFixture) -> None:
     cb = mocker.stub()
     
     with Transaction() as tx:
@@ -76,7 +76,7 @@ def throw(x: Exception):
     raise x
 
 
-def test_undo_error_group():
+def test_undo_error_group() -> None:
     with Transaction() as tx:
         tx.add_undo(lambda: throw(MyError(1)))
         tx.add_undo(lambda: throw(MyError(2)))
@@ -89,7 +89,7 @@ def test_undo_error_group():
         assert exc_info.value.__cause__ is None
 
 
-def test_undo_error_group_with_cause():
+def test_undo_error_group_with_cause() -> None:
     with pytest.RaisesGroup(MyError, MyError, MyError) as exc_info:
         with Transaction() as tx:
             tx.add_undo(lambda: throw(MyError(1)))

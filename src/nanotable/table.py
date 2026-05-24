@@ -6,7 +6,7 @@ from nanotable.transaction import Transaction
 from nanotable.field import FieldGetter
 
 
-class Table[Elem]:
+class Table[Elem, Indexes = _IndexDirectoryProxy[Elem]]:
     __slots__ = ("contents", "getfield", "indexes")
     
     contents: list[Elem]
@@ -21,7 +21,7 @@ class Table[Elem]:
     # TODO: Create index
     
     @property
-    def by(self) -> _IndexDirectoryProxy[Elem]:
+    def by(self) -> Indexes:
         return _IndexDirectoryProxy(self)
     
     def add(self, elem: Elem) -> None:
@@ -43,9 +43,9 @@ class Table[Elem]:
 class _IndexDirectoryProxy[Elem]:
     __slots__ = ("table",)
     
-    table: Table[Elem]
+    table: Table[Elem, typing.Any]
     
-    def __init__(self, table: Table[Elem]):
+    def __init__(self, table: Table[Elem, typing.Any]):
         self.table = table
     
     def __getattr__(self, name: str) -> _IndexProxy[Elem]:
@@ -60,12 +60,12 @@ class _IndexDirectoryProxy[Elem]:
 class _IndexProxy[Elem]:
     __slots__ = ("table", "index")
     
-    table: Table[Elem]
+    table: Table[Elem, typing.Any]
     index: UniqueIndex[Elem]
     
     def __init__(
         self,
-        table: Table[Elem],
+        table: Table[Elem, typing.Any],
         index: UniqueIndex[Elem],
     ):
         self.table = table

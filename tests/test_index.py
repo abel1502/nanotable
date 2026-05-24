@@ -7,8 +7,8 @@ from nanotable.index import UniqueIndex
 from nanotable.field import dict_getter
 
 
-def test_normal():
-    index: UniqueIndex[int] = UniqueIndex("id")
+def test_normal() -> None:
+    index: UniqueIndex[dict[str, typing.Any]] = UniqueIndex("id")
     
     obj1 = {"id": 1, "other": "foo"}
     obj2 = {"id": 2, "other": "bar"}
@@ -51,8 +51,8 @@ def test_normal():
     index.add({"id": 1, "other": None}, getfield=dict_getter)
 
 
-def test_none_valued():
-    index: UniqueIndex[int] = UniqueIndex("id", none_as_value=True)
+def test_none_valued() -> None:
+    index: UniqueIndex[dict[str, typing.Any]] = UniqueIndex("id", none_as_value=True)
     
     obj = {"id": None, "other": "foo"}
     
@@ -67,8 +67,8 @@ def test_none_valued():
         index.add(obj, getfield=dict_getter)
 
 
-def test_optional():
-    index: UniqueIndex[int] = UniqueIndex("id", required=False)
+def test_optional() -> None:
+    index: UniqueIndex[dict[str, typing.Any]] = UniqueIndex("id", required=False)
     
     obj1 = {"id": 1, "other": "foo"}
     obj2 = {"other": "bar"}
@@ -88,8 +88,8 @@ def test_optional():
         index.get(None)
 
 
-def test_optional_none_valued():
-    index: UniqueIndex[int] = UniqueIndex("id", required=False, none_as_value=True)
+def test_optional_none_valued() -> None:
+    index: UniqueIndex[dict[str, typing.Any]] = UniqueIndex("id", required=False, none_as_value=True)
     
     obj1 = {"id": 1, "other": "foo"}
     obj2 = {"other": "bar"}
@@ -108,8 +108,8 @@ def test_optional_none_valued():
     assert index.get(None) == obj3
 
 
-def test_get_overloads():
-    index: UniqueIndex[int] = UniqueIndex("id")
+def test_get_overloads() -> None:
+    index: UniqueIndex[dict[str, typing.Any]] = UniqueIndex("id")
     
     obj = {"id": 1}
     index.add(obj, getfield=dict_getter)
@@ -119,7 +119,7 @@ def test_get_overloads():
     assert index.get(2, None) is None
     
     with pytest.raises(TypeError):
-        index.get()
+        index.get()  # type: ignore
     
     with pytest.raises(TypeError):
-        index.get(1, None, None)
+        index.get(1, None, None)  # type: ignore
