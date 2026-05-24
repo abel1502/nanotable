@@ -1,24 +1,21 @@
 from __future__ import annotations
 import typing
-import enum
+
+from typing_extensions import Sentinel
 
 
-# Apparently the best way to keep the type checker happy until 3.15 and standard library `sentinel`
-class Missing(enum.Enum):
-    MISSING = 0
+MISSING = Sentinel("MISSING")
 
 
-MISSING = Missing.MISSING
+# Not putting `| MISSING` in the return type because neither mypy nor pylance understand it. This will have to do
+type FieldGetter[Obj] = typing.Callable[[Obj, str], typing.Any | Sentinel]
 
 
-type FieldGetter[Obj] = typing.Callable[[Obj, str], typing.Any | type[Missing]]
-
-
-def attr_getter(obj: object, key: str) -> typing.Any | type[Missing]:
+def attr_getter(obj: object, key: str) -> typing.Any | Sentinel:
     return getattr(obj, key, MISSING)
 
 
-def dict_getter(obj: dict[str, typing.Any], key: str) -> typing.Any | type[Missing]:
+def dict_getter(obj: dict[str, typing.Any], key: str) -> typing.Any | Sentinel:
     return obj.get(key, MISSING)
 
 

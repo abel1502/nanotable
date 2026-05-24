@@ -27,7 +27,9 @@ classifiers = [
   "Intended Audience :: Developers",
   "Typing :: Typed",
 ]
-dependencies = []
+dependencies = [
+    "typing-extensions>=4.15.0",
+]
 
 [project.optional-dependencies]
 dev = [
