@@ -1,5 +1,6 @@
 from __future__ import annotations
 import typing
+from contextlib import contextmanager
 
 from nanotable.index import UniqueIndex
 from nanotable.transaction import Transaction
@@ -7,37 +8,62 @@ from nanotable.field import FieldGetter
 
 
 class Table[Elem, Indexes = _IndexDirectoryProxy[Elem]]:
-    __slots__ = ("contents", "getfield", "indexes")
+    __slots__ = (
+        "_contents",
+        "_getfield",
+        "_indexes",
+        "_by",
+    )
     
-    contents: list[Elem]
-    getfield: FieldGetter[Elem]
-    indexes: dict[str, UniqueIndex[Elem]]
+    _contents: list[Elem]
+    _getfield: FieldGetter[Elem]
+    _indexes: dict[str, UniqueIndex[Elem]]
     
+    by: Indexes
+    
+    # TODO: Dedicated primary index, which could let us get rid of a contents list.
     def __init__(self, getfield: FieldGetter[Elem]):
-        self.contents = []
-        self.getfield = getfield
-        self.indexes = {}
+        self._contents = []
+        self._getfield = getfield
+        self._indexes = {}
+        
+        self.by = typing.cast(Indexes, _IndexDirectoryProxy(self))
     
-    # TODO: Create index
-    
-    @property
-    def by(self) -> Indexes:
-        return _IndexDirectoryProxy(self)
+    def index_on(
+        self,
+        key_field: str,
+        *,
+        none_as_value: bool = False,
+        required: bool = True,
+    ) -> typing.Self:
+        # TODO: Only create unique indexes for now
+        self._indexes[key_field] = UniqueIndex(key_field, none_as_value=none_as_value, required=required)
+        return self
     
     def add(self, elem: Elem) -> None:
         with Transaction() as tx:
-            self.contents.append(elem)
-            tx.add_undo(self.contents.pop)
+            self._contents.append(elem)
+            tx.add_undo(self._contents.pop)
             
-            for index in self.indexes.values():
-                index.add(elem, getfield=self.getfield)
-                tx.add_undo(lambda: index.remove(elem, getfield=self.getfield))
+            for index in self._indexes.values():
+                index.register(self._getfield(elem), elem)
+                tx.add_undo(lambda: index.unregister(self._getfield(elem), elem))
     
     def remove(self, elem: Elem) -> None:
-        self.contents.remove(elem)
+        # TODO: Also make a transaction? Shouldn't normally fail
         
-        for index in self.indexes.values():
-            index.remove(elem, getfield=self.getfield)
+        self._contents.remove(elem)
+        
+        for index in self._indexes.values():
+            index.unregister(self._getfield(elem), elem)
+    
+    # TODO: Also need to issue warnings when changes in indexed attributes are detected!
+    # And document that they are supposed to be immutable except with `rekey`.
+    @contextmanager
+    def rekey(self, obj: Elem) -> typing.Generator[None, None, None]:
+        self.remove(obj)
+        yield
+        self.add(obj)
 
 
 class _IndexDirectoryProxy[Elem]:
@@ -49,7 +75,7 @@ class _IndexDirectoryProxy[Elem]:
         self.table = table
     
     def __getattr__(self, name: str) -> _IndexProxy[Elem]:
-        index = self.table.indexes.get(name, None)
+        index = self.table._indexes.get(name, None)
         
         if index is None:
             raise AttributeError(f"Table has no index on {name!r}")
@@ -78,4 +104,4 @@ class _IndexProxy[Elem]:
         return self.index.get(key, default)
 
     def __delitem__(self, key: typing.Any):
-        self.table.remove(key)
+        self.table.remove(self[key])
