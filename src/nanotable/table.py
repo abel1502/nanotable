@@ -7,7 +7,7 @@ from nanotable.field import FieldGetter
 
 
 class Table[Elem]:
-    __slots__ = ("contents", "indexes")
+    __slots__ = ("contents", "getfield", "indexes")
     
     contents: list[Elem]
     getfield: FieldGetter[Elem]
