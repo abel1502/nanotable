@@ -33,7 +33,7 @@ jobs:
           test "$NAME" = "$VERSION"
 
       - name: Test
-        run: uvx hatch test -py 3.12,3.13,3.14
+        run: uvx hatch test -py 3.13,3.14
 
       - name: Type-check
         run: uvx hatch run type:check
