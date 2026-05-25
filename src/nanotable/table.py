@@ -88,35 +88,8 @@ class _IndexDirectoryProxy[Elem]:
     def __init__(self, table: Table[Elem, typing.Any]):
         self.table = table
     
-    def __getattr__(self, name: str) -> _IndexProxy[Elem]:
-        index = self.table._indexes.get(name, None)
-        
-        if index is None:
-            raise AttributeError(f"Table has no index on {name!r}")
-        
-        return _IndexProxy(self.table, index)
-
-
-# TODO: Remove, just expose the index itself?
-class _IndexProxy[Elem]:
-    __slots__ = ("table", "index")
-    
-    table: Table[Elem, typing.Any]
-    index: UniqueIndex[Elem]
-    
-    def __init__(
-        self,
-        table: Table[Elem, typing.Any],
-        index: UniqueIndex[Elem],
-    ):
-        self.table = table
-        self.index = index
-    
-    def __getitem__(self, key: typing.Any) -> Elem:
-        return self.index.get(key)
-    
-    def get[Default](self, key: typing.Any, default: Default) -> Elem | Default:
-        return self.index.get(key, default)
-
-    def __delitem__(self, key: typing.Any):
-        self.table.remove(self[key])
+    def __getattr__(self, name: str) -> typing.Mapping[typing.Any, Elem]:
+        try:
+            return self.table._indexes[name]
+        except KeyError:
+            raise AttributeError(f"Table has no index on {name!r}") from None
