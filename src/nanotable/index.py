@@ -1,106 +1,146 @@
 from __future__ import annotations
 import typing
+from abc import ABC, abstractmethod
+import warnings
 
 from nanotable.field import FieldGetter, MISSING, typeof_MISSING
+from nanotable.errors import ValidationError
 
 
-class UniqueIndex[Obj, Key = typing.Any](typing.Mapping[Key, Obj]):
-    """
-    A unique index lets you look up the single element with a certain value of the `key_field` attribute.
-    """
+class Index[Obj, Result = typing.Any, Key = typing.Any](ABC, typing.Mapping[Key, Result]):
+    __slots__ = (
+        "_lookup",
+        "on_field",
+        "getfield",
+        "none_means_empty",
+        "required",
+    )
     
-    __slots__ = ("_lookup", "key_field", "sentinel", "required")
-    
-    _lookup: dict[Key, Obj]
-    key_field: str
-    sentinel: typing.Any
+    _lookup: dict[Key, Result]
+    on_field: str
+    getfield: FieldGetter
+    none_means_empty: bool
     required: bool
     
-    def __init__(self, key_field: str, *, none_as_value: bool = False, required: bool = True):
+    def __init__(
+        self,
+        on_field: str,
+        getfield: FieldGetter,
+        *,
+        none_means_empty: bool = True,
+        required: bool = False,
+    ):
         """
-        :param key_field: The name of the field to index by.
-        :param none_as_value: If `True`, `None` is treated as a regular value.
-            If `False`, `None` is treated the same as the lack of the `key_field` attribute.
-            Defaults to `False`.
-        :param required: If `True`, all objects must have a value for `key_field`.
-            If `False`, objects without a value for `key_field` are ignored.
+        :param on_field: The name of the field to index by.
+        :param getfield: A `FieldGetter` to use for this index. Used to switch
+            between mapping item, object attribute and other definitions of a field.
+        :param none_means_empty: If `False`, `None` is treated as a regular value.
+            If `True`, `None` is treated the same as the lack of the `on_field` attribute.
             Defaults to `True`.
+        :param required: If `True`, all objects must have a value for `on_field`.
+            If `False`, objects without a value for `on_field` are ignored.
+            Defaults to `False`.
         """
         
         self._lookup = {}
-        self.key_field = key_field
-        self.sentinel = object() if none_as_value else None
+        self.on_field = on_field
+        self.getfield = getfield
+        self.none_means_empty = none_means_empty
         self.required = required
     
-    def register(self, key: Key | typeof_MISSING, elem: Obj) -> None:
+    def register(self, elem: Obj) -> None:
         """
         Adds an element to the index.
         
         :param elem: The element to add.
-        :param getfield: A function to get the value of the `key_field` attribute. Defaults to `getattr`.
         
-        :raises ValueError: If `required` is `True` and the element has no value for `key_field`.
-        :raises KeyError: If the element already exists in the index.
+        :raises ValueError: If the element has no value for the index field and it is required.
+        :raises ValidationError: If registering the element would violate some of the index invariants.
         """
         
-        if key is MISSING:
-            key = self.sentinel
+        key = self.getfield(elem, self.on_field)
         
-        if key is self.sentinel:
+        if key is None and self.none_means_empty:
+            key = MISSING
+        
+        if key is MISSING:
             if self.required:
-                raise ValueError(f"Element {elem!r} has no {self.key_field!r} field which is required")
+                raise ValueError(f"Element {elem!r} has no {self.on_field!r} field which is required")
             return
         
         key = typing.cast(Key, key)
 
-        if key in self._lookup:
-            raise KeyError(f"Key {key!r} already exists in index by {self.key_field!r}")
-        
-        self._lookup[key] = elem
+        self._register(key, elem)
     
-    def unregister(self, key: Key | typeof_MISSING, elem: Obj, *, missing_ok: bool = False) -> None:
+    @abstractmethod
+    def _register(self, key: Key, elem: Obj) -> None:
+        """
+        Index-specific implementation for `register`.
+        
+        :param key: The key to add. Guaranteed to match the field of `elem`.
+        :param elem: The element to add.
+        
+        :raises ValidationError: If registering the element would violate some of the index invariants.
+        """
+    
+    def unregister(self, elem: Obj, *, missing_ok: bool = False) -> None:
         """
         Removes an element from the index.
         
         :param elem: The element to remove.
         :param missing_ok: If `False`, the element must exist in the index. Defaults to `False`.
         
-        :raises ValueError: If `required` is `True` and the element has no value for `key_field`.
+        :raises ValueError: If the element has no value for the index field and it is required.
         :raises KeyError: If `missing_ok` is `False` and the element does not exist in the index.
         """
         
-        if key is MISSING:
-            key = self.sentinel
+        key = self.getfield(elem, self.on_field)
         
-        if key is self.sentinel:
+        if key is None and self.none_means_empty:
+            key = MISSING
+        
+        if key is MISSING:
             if self.required:
-                raise ValueError(f"Element {elem!r} has no {self.key_field!r} field which is required")
+                raise ValueError(f"Element {elem!r} has no {self.on_field!r} field which is required")
             return
         
         key = typing.cast(Key, key)
         
-        if not missing_ok and key not in self._lookup:
-            raise KeyError(f"Key {key!r} not found in index by {self.key_field!r}")
+        if key in self._lookup:
+            self._unregister(key, elem)
+        elif not missing_ok:
+            raise KeyError(f"Key {key!r} not found in index by {self.on_field!r}")
+    
+    @abstractmethod
+    def _unregister(self, key: Key, elem: Obj) -> None:
+        """
+        Index-specific implementation for `unregister`.
         
-        self._lookup.pop(key, None)
+        :param key: The key to remove. Guaranteed to match the field of `elem`. Guaranteed to be in the index.
+        :param elem: The element to remove.
+        """
     
     @typing.overload
-    def get(self, key: typing.Any, /) -> Obj:
+    def get(self, key: typing.Any, /) -> Result:
         """
-        Returns the element with the given key.
+        Retrieves the element with the given key.
         
         :param key: The key to look up.
+        
+        :returns: The element with the given key.
         
         :raises KeyError: If the key is not found in the index.
         """
     
     @typing.overload
-    def get[Default](self, key: typing.Any, default: Default, /) -> Obj | Default:
+    def get[Default](self, key: typing.Any, default: Default, /) -> Result | Default:
         """
-        Returns the element with the given key, or `default` if the key is not found in the index.
+        Retrieves the element with the given key, or `default` if the key is not found in the index.
         
         :param key: The key to look up.
         :param default: The value to return if the key is not found in the index.
+        
+        :returns: The element with the given key, or `default` if the key is not found in the index.
         """
     
     def get(self, key, *args):
@@ -110,21 +150,53 @@ class UniqueIndex[Obj, Key = typing.Any](typing.Mapping[Key, Obj]):
         if len(args) != 0:
             raise TypeError(f"get() has no overload with {len(args) + 1} positional arguments")
         
-        result = self._lookup.get(key, self.sentinel)
+        result = self._lookup.get(key, MISSING)
         
-        if result is self.sentinel:
-            raise KeyError(f"Key {key!r} not found in index by {self.key_field!r}")
+        if result is MISSING:
+            raise KeyError(f"Key {key!r} not found in index on {self.on_field!r}")
+        
+        actual_key = self.getfield(result, self.on_field)
+        if actual_key != key:
+            warnings.warn(
+                f"An indexed field {self.on_field!r} was changed on {result!r} from {key!r} to {actual_key!r}! "
+                f"The table is now in an inconsistent state. Use `Table.rekey` for changing indexed fields safely.",
+                skip_file_prefixes=(__file__,),
+            )
         
         return result
 
-    def __getitem__(self, key: Key) -> Obj:
+    def __getitem__(self, key: Key) -> Result:
         return self.get(key)
+    
+    def __contains__(self, key: object) -> bool:
+        return key in self._lookup
     
     def __len__(self) -> int:
         return len(self._lookup)
     
     def __iter__(self) -> typing.Iterator[Key]:
         return iter(self._lookup)
+
+
+class UniqueIndex[Obj, Key = typing.Any](Index[Obj, Obj, Key]):
+    """
+    A unique index lets you look up the single element with a certain value of one of the fields.
+    """
+    
+    @typing.override
+    def _register(self, key: Key, elem: Obj) -> None:
+        if key in self._lookup:
+            old_elem = self._lookup[key]
+            raise ValidationError(f"Duplicate value {key!r} for unique-indexed field {self.on_field!r} (existing object: {old_elem!r}, new object: {elem!r})")
+        
+        self._lookup[key] = elem
+    
+    @typing.override
+    def _unregister(self, key: Key, elem: Obj) -> None:
+        self._lookup.pop(key, None)
+
+
+# TODO: PrimaryIndex, inheriting from UniqueIndex, enforcing/ignoring "required", and exposing an `all()` method or something
 
 
 # TODO: MultiIndex with duplicates allowed
