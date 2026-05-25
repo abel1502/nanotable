@@ -57,7 +57,7 @@ table = Table[dict[str, Any]](getfield=dict_getter)
 To add static typing to your indexes, you need to define a type with all of them:
 
 ```python
-class MyIndexes:
+class MyIndexes(Protocol):
     name: UniqueIndex[Person, str]
     phone: UniqueIndex[Person, str]
 
