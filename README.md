@@ -3,11 +3,33 @@
 [![PyPI - Version](https://img.shields.io/pypi/v/nanotable.svg)](https://pypi.org/project/nanotable)
 [![PyPI - Python Version](https://img.shields.io/pypi/pyversions/nanotable.svg)](https://pypi.org/project/nanotable)
 
+[TODO: Code coverage report]
+
+*This is a work in progress. Star/follow this repository to be notified of the first release.*
+
 Nanotable is meant to bridge the gap between simple collections, such as `list` and `dict`,
 and full-on database tables. It lets you store a set of objects, index it by
-several keys, and more! The project draws inspiration from [littletable](https://github.com/ptmcg/littletable),
+several keys, and more! It's fast, memory-efficient, and well-tested.
+The project draws inspiration from [littletable](https://github.com/ptmcg/littletable),
 but is a completely original implementation. Its goal is to avoid feature bloat
 and maintain performance on par with built-in collections.
+
+There are several situations where you might want to use Nanotable:
+
+- When you'd otherwise use a `dict` from an object's field to the object itself.
+  Nanotable does that for you, and also provides additional features, such
+  as checking for the existence of an element with a simple `in` check;
+  hanging the value of the key field with `Table.rekey`, or catching
+  accidental changes to the key field automatically.
+
+- When you'd otherwise use a `bidict`. That's a great library in its own right,
+  but Nanotable provides some additional functionality such as storing extra
+  non-hashable metadata along your objects (also see the previous point).
+
+- When you'd otherwise use a database. Nanotable spares you the computational
+  and mental overhead. You probably have already written your own domain-specific
+  version of Nanotable at some point in your life -- now you can use a well-tested
+  library instead.
 
 -----
 
