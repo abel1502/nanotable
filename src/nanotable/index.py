@@ -206,5 +206,6 @@ class UniqueIndex[Obj, Key = typing.Any](Index[Obj, Obj, Key]):
 
 
 __all__ = [
+    "Index",
     "UniqueIndex",
 ]
