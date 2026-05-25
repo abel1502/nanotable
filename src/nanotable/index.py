@@ -4,7 +4,6 @@ import typing
 from nanotable.field import FieldGetter, MISSING, typeof_MISSING
 
 
-# TODO: Rename to just Index
 class UniqueIndex[Obj, Key = typing.Any](typing.Mapping[Key, Obj]):
     """
     A unique index lets you look up the single element with a certain value of the `key_field` attribute.
@@ -126,6 +125,12 @@ class UniqueIndex[Obj, Key = typing.Any](typing.Mapping[Key, Obj]):
     
     def __iter__(self) -> typing.Iterator[Key]:
         return iter(self._lookup)
+
+
+# TODO: MultiIndex with duplicates allowed
+
+
+# TODO: OrderedIndex with `[low:high]` syntax
 
 
 __all__ = [
