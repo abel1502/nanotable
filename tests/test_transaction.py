@@ -2,7 +2,7 @@ from __future__ import annotations
 import typing
 
 import pytest
-from pytest_mock import MockerFixture
+from pytest_mock import MockerFixture  # TODO: Use unittest.mock directly? Would enable hypothesis as well
 
 import nanotable.transaction
 from nanotable.transaction import Transaction
