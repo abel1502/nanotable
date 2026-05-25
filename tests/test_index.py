@@ -3,125 +3,137 @@ import typing
 
 import pytest
 
+import nanotable.index
 from nanotable.index import UniqueIndex
 from nanotable.field import dict_getter
 from nanotable.errors import ValidationError
 
 
-def test_normal() -> None:
-    index: UniqueIndex[dict[str, typing.Any]] = UniqueIndex("id", dict_getter, required=True)
+def test_public() -> None:
+    exported = nanotable.index.__all__
     
-    obj1 = {"id": 1, "other": "foo"}
-    obj2 = {"id": 2, "other": "bar"}
-    obj3 = {"id": 3, "other": "baz"}
-    
-    index.register(obj1)
-    index.register(obj2)
-    index.register(obj3)
-    
-    assert index.get(1) == obj1
-    assert index.get(2) == obj2
-    assert index.get(3) == obj3
-    
-    with pytest.raises(KeyError):
-        index.get(4)
-    
-    index.unregister(obj1)
-    
-    with pytest.raises(KeyError):
-        index.get(1)
-    
-    assert index.get(1, "hello") == "hello"
-    assert index.get(2, "hello") == obj2
-    
-    with pytest.raises(KeyError):
+    assert "Index" in exported
+    assert "UniqueIndex" in exported
+    assert "PrimaryIndex" in exported
+    # assert "MultiIndex" in exported
+    # assert "OrderedIndex" in exported
+
+
+class TestUniqueIndex:
+    def test_normal(self) -> None:
+        index: UniqueIndex[dict[str, typing.Any]] = UniqueIndex("id", dict_getter, required=True)
+        
+        obj1 = {"id": 1, "other": "foo"}
+        obj2 = {"id": 2, "other": "bar"}
+        obj3 = {"id": 3, "other": "baz"}
+        
+        index.register(obj1)
+        index.register(obj2)
+        index.register(obj3)
+        
+        assert index.get(1) == obj1
+        assert index.get(2) == obj2
+        assert index.get(3) == obj3
+        
+        with pytest.raises(KeyError):
+            index.get(4)
+        
         index.unregister(obj1)
-    
-    index.unregister(obj1, missing_ok=True)
-    index.unregister({"id": -1}, missing_ok=True)
-    
-    with pytest.raises(ValueError):
-        index.unregister({}, missing_ok=True)
+        
+        with pytest.raises(KeyError):
+            index.get(1)
+        
+        assert index.get(1, "hello") == "hello"
+        assert index.get(2, "hello") == obj2
+        
+        with pytest.raises(KeyError):
+            index.unregister(obj1)
+        
+        index.unregister(obj1, missing_ok=True)
+        index.unregister({"id": -1}, missing_ok=True)
+        
+        with pytest.raises(ValueError):
+            index.unregister({}, missing_ok=True)
 
-    with pytest.raises(ValueError):
-        index.register({})
+        with pytest.raises(ValueError):
+            index.register({})
 
-    with pytest.raises(ValueError):
-        index.register({"id": None})
+        with pytest.raises(ValueError):
+            index.register({"id": None})
 
-    index.register({"id": 1, "other": None})
+        index.register({"id": 1, "other": None})
 
 
-def test_none_valued() -> None:
-    index: UniqueIndex[dict[str, typing.Any]] = UniqueIndex("id", dict_getter, required=True, none_means_empty=False)
-    
-    obj = {"id": None, "other": "foo"}
-    
-    with pytest.raises(KeyError):
-        index.get(None)
-    
-    index.register(obj)
-    
-    assert index.get(None) == obj
-    
-    with pytest.raises(ValidationError):
+    def test_none_valued(self) -> None:
+        index: UniqueIndex[dict[str, typing.Any]] = UniqueIndex("id", dict_getter, required=True, none_means_empty=False)
+        
+        obj = {"id": None, "other": "foo"}
+        
+        with pytest.raises(KeyError):
+            index.get(None)
+        
         index.register(obj)
+        
+        assert index.get(None) == obj
+        
+        with pytest.raises(ValidationError):
+            index.register(obj)
 
 
-def test_optional() -> None:
-    index: UniqueIndex[dict[str, typing.Any]] = UniqueIndex("id", dict_getter, required=False)
-    
-    obj1 = {"id": 1, "other": "foo"}
-    obj2 = {"other": "bar"}
-    obj3 = {"id": None, "other": "baz"}
-    
-    index.register(obj1)
-    index.register(obj2)
-    
-    assert index.get(1) == obj1
-    
-    with pytest.raises(KeyError):
-        index.get(None)
-    
-    index.register(obj3)
-    
-    with pytest.raises(KeyError):
-        index.get(None)
+    def test_optional(self) -> None:
+        index: UniqueIndex[dict[str, typing.Any]] = UniqueIndex("id", dict_getter, required=False)
+        
+        obj1 = {"id": 1, "other": "foo"}
+        obj2 = {"other": "bar"}
+        obj3 = {"id": None, "other": "baz"}
+        
+        index.register(obj1)
+        index.register(obj2)
+        
+        assert index.get(1) == obj1
+        
+        with pytest.raises(KeyError):
+            index.get(None)
+        
+        index.register(obj3)
+        
+        with pytest.raises(KeyError):
+            index.get(None)
 
 
-def test_optional_none_valued() -> None:
-    index: UniqueIndex[dict[str, typing.Any]] = UniqueIndex("id", dict_getter, required=False, none_means_empty=False)
-    
-    obj1 = {"id": 1, "other": "foo"}
-    obj2 = {"other": "bar"}
-    obj3 = {"id": None, "other": "baz"}
-    
-    index.register(obj1)
-    index.register(obj2)
-    
-    assert index.get(1) == obj1
-    
-    with pytest.raises(KeyError):
-        index.get(None)
-    
-    index.register(obj3)
-    
-    assert index.get(None) == obj3
+    def test_optional_none_valued(self) -> None:
+        index: UniqueIndex[dict[str, typing.Any]] = UniqueIndex("id", dict_getter, required=False, none_means_empty=False)
+        
+        obj1 = {"id": 1, "other": "foo"}
+        obj2 = {"other": "bar"}
+        obj3 = {"id": None, "other": "baz"}
+        
+        index.register(obj1)
+        index.register(obj2)
+        
+        assert index.get(1) == obj1
+        
+        with pytest.raises(KeyError):
+            index.get(None)
+        
+        index.register(obj3)
+        
+        assert index.get(None) == obj3
 
 
-def test_get_overloads() -> None:
-    index: UniqueIndex[dict[str, typing.Any]] = UniqueIndex("id", dict_getter, required=True)
-    
-    obj = {"id": 1}
-    index.register(obj)
-    
-    assert index.get(1) == obj
-    assert index.get(1, None) == obj
-    assert index.get(2, None) is None
-    
-    with pytest.raises(TypeError):
-        index.get()  # type: ignore
-    
-    with pytest.raises(TypeError):
-        index.get(1, None, None)  # type: ignore
+    def test_get_overloads(self) -> None:
+        index: UniqueIndex[dict[str, typing.Any]] = UniqueIndex("id", dict_getter, required=True)
+        
+        obj = {"id": 1}
+        index.register(obj)
+        
+        assert index.get(1) == obj
+        assert index.get(1, None) == obj
+        assert index.get(2, None) is None
+        
+        with pytest.raises(TypeError):
+            index.get()  # type: ignore
+        
+        with pytest.raises(TypeError):
+            index.get(1, None, None)  # type: ignore
 

@@ -24,7 +24,7 @@ A basic usage example is given below:
 ```python
 from nanotable import Table, dict_getter
 
-table = Table(getfield=dict_getter)\
+table = Table(of_dicts=True)\
     .index_on("name", required=True)\
     .index_on("phone")
 
@@ -38,10 +38,10 @@ table.by.phone["987-654-3210"]  # {"name": "Jane Doe", "phone": "987-654-3210", 
 table.remove(table.by.name["Barrack Obama"])
 ```
 
-You can store any kind of object in the table. Specify `getfield=dict_getter`
-to use mappings (`dict` or anything with `obj[key]` item access), or
-`getfield=attr_getter` to use objects with attributes (`obj.key` access).
-You may also define your own `getfield` function with the signature `(obj, key: str) -> Any | MISSING`.
+You can store any kind of object in the table. Specify `of_dicts=True` or `getfield=dict_getter`
+to use mappings (`dict` or anything with `obj[key]` item access); `of_objects=True` or
+`getfield=attr_getter` to use objects with attributes (`obj.key` access); or
+any function with the signature `(obj, key: str) -> Any | MISSING` as `getfield`.
 
 ### Typing
 
@@ -49,9 +49,9 @@ The library is fully type-annotated. To make use of this, at the bare minimum
 you can specify the type of the objects you want to store in the table:
 
 ```python
-table = Table[Person](getfield=attr_getter)
+table = Table[Person](of_objects=True)
 # or
-table = Table[dict[str, Any]](getfield=dict_getter)
+table = Table[dict[str, Any]](of_objects=True)
 ```
 
 To add static typing to your indexes, you need to define a type with all of them:
@@ -61,7 +61,7 @@ class MyIndexes(Protocol):
     name: UniqueIndex[Person, str]
     phone: UniqueIndex[Person, str]
 
-table = Table[Person, MyIndexes](getfield=attr_getter)
+table = Table[Person, MyIndexes](of_objects=True)
 table.index_on("name", required=True)
 table.index_on("phone")
 ```

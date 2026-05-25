@@ -14,10 +14,12 @@ type typeof_MISSING = Sentinel
 type FieldGetter[Obj] = typing.Callable[[Obj, str], typing.Any | typeof_MISSING]
 
 
+# TODO: Rename?
 def attr_getter(obj: object, key: str) -> typing.Any | typeof_MISSING:
     return getattr(obj, key, MISSING)
 
 
+# TODO: Rename?
 def dict_getter(obj: dict[str, typing.Any], key: str) -> typing.Any | typeof_MISSING:
     return obj.get(key, MISSING)
 

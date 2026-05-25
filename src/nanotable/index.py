@@ -196,7 +196,27 @@ class UniqueIndex[Obj, Key = typing.Any](Index[Obj, Obj, Key]):
         self._lookup.pop(key, None)
 
 
-# TODO: PrimaryIndex, inheriting from UniqueIndex, enforcing/ignoring "required", and exposing an `all()` method or something
+class PrimaryIndex[Obj, Key = typing.Any](UniqueIndex[Obj, Key]):
+    """
+    A primary index is a special kind of unique index that also acts as the primary storage for the table's entries.
+    """
+    
+    def __init__(
+        self,
+        on_field: str,
+        getfield: FieldGetter,
+        *,
+        none_means_empty: bool = True,
+    ):
+        super().__init__(
+            on_field,
+            getfield,
+            none_means_empty=none_means_empty,
+            required=True,
+        )
+    
+    def all(self) -> typing.Iterable[Obj]:
+        return self.values()
 
 
 # TODO: MultiIndex with duplicates allowed
@@ -208,4 +228,5 @@ class UniqueIndex[Obj, Key = typing.Any](Index[Obj, Obj, Key]):
 __all__ = [
     "Index",
     "UniqueIndex",
+    "PrimaryIndex",
 ]
