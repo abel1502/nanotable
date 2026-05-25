@@ -25,8 +25,8 @@ A basic usage example is given below:
 from nanotable import Table, dict_getter
 
 table = Table(getfield=dict_getter)\
-    .index_on("name")\
-    .index_on("phone", required=False)
+    .index_on("name", required=True)\
+    .index_on("phone")
 
 table.add({"name": "John Doe", "phone": "123-456-7890", "age": 25})
 table.add({"name": "Jane Doe", "phone": "987-654-3210", "age": 26})
@@ -62,8 +62,8 @@ class MyIndexes(Protocol):
     phone: UniqueIndex[Person, str]
 
 table = Table[Person, MyIndexes](getfield=attr_getter)
-table.index_on("name")
-table.index_on("phone", required=False)
+table.index_on("name", required=True)
+table.index_on("phone")
 ```
 
 ### Caveats
