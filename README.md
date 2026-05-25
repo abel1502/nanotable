@@ -108,6 +108,14 @@ with table.rekey(obj):
 
 If a field is not indexed, this is unnecessary.
 
+If you are certain that your code never modifies an indexed field of an object
+in a `Table`, you can disable the checks that issue the warning by setting
+`nanotable.safety.disable_safety_checks` to `False`. This provides a small
+performance improvement, with the downside that any potential bugs will be
+almost impossible to catch and will show up as subtly wrong results. It is
+recommended that you keep the safety checks on unless you know what you're
+doing.
+
 Nanotable is also not thread-safe. When using a `Table` from multiple threads
 at once, use a synchronization primitive such as a `threading.Lock` to ensure
 that only one thread can interact with the table at a time. Multithreaded

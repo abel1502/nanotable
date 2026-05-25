@@ -242,6 +242,17 @@ class Table[Elem, Indexes = _IndexDirectoryProxy[Elem]]:
         
         for index in self._indexes.values():
             index.unregister(elem)
+
+    def clear(self) -> None:
+        """
+        Removes all elements from the table.
+        """
+        
+        if not self.has_primary_index:
+            typing.cast(list, self._contents).clear()
+        
+        for index in self._indexes.values():
+            index.unregister_all()
     
     @contextmanager
     def rekey(self, obj: Elem) -> typing.Generator[None, None, None]:
@@ -325,10 +336,6 @@ class Table[Elem, Indexes = _IndexDirectoryProxy[Elem]]:
             return self.primary_index.values()
         
         return iter(self._contents)
-    
-    # TODO: __del__ to check for inconsistencies
-    
-    # TODO: clear
 
 
 class _IndexDirectoryProxy[Elem]:

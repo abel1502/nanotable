@@ -5,6 +5,7 @@ import warnings
 
 from nanotable.field import FieldGetter, MISSING, typeof_MISSING
 from nanotable.errors import ValidationError
+from nanotable.safety import disable_safety_checks, verify_immutable_key
 
 
 class Index[Obj, Result = typing.Any, Key = typing.Any](ABC, typing.Mapping[Key, Result]):
@@ -120,6 +121,17 @@ class Index[Obj, Result = typing.Any, Key = typing.Any](ABC, typing.Mapping[Key,
         :param elem: The element to remove.
         """
     
+    def unregister_all(self) -> None:
+        """
+        Removes all elements from the index.
+        """
+        
+        if not disable_safety_checks:
+            for key, obj in self.items():
+                verify_immutable_key(key, self.getfield(obj, self.on_field), obj, self.on_field)
+        
+        self._lookup.clear()
+    
     @typing.overload
     def get(self, key: typing.Any, /) -> Result:
         """
@@ -155,13 +167,8 @@ class Index[Obj, Result = typing.Any, Key = typing.Any](ABC, typing.Mapping[Key,
         if result is MISSING:
             raise KeyError(f"Key {key!r} not found in index on {self.on_field!r}")
         
-        actual_key = self.getfield(result, self.on_field)
-        if actual_key != key:
-            warnings.warn(
-                f"An indexed field {self.on_field!r} was changed on {result!r} from {key!r} to {actual_key!r}! "
-                f"The table is now in an inconsistent state. Use `Table.rekey` for changing indexed fields safely.",
-                skip_file_prefixes=(__file__,),
-            )
+        if not disable_safety_checks:
+            verify_immutable_key(key, self.getfield(result, self.on_field), result, self.on_field)
         
         return result
 
@@ -176,6 +183,23 @@ class Index[Obj, Result = typing.Any, Key = typing.Any](ABC, typing.Mapping[Key,
     
     def __iter__(self) -> typing.Iterator[Key]:
         return iter(self._lookup)
+    
+    @typing.override
+    def keys(self) -> typing.KeysView[Key]:
+        return self._lookup.keys()
+    
+    @typing.override
+    def values(self) -> typing.ValuesView[Result]:
+        return self._lookup.values()
+    
+    @typing.override
+    def items(self) -> typing.ItemsView[Key, Result]:
+        return self._lookup.items()
+    
+    def __del__(self) -> None:
+        if not disable_safety_checks:
+            for key, obj in self.items():
+                verify_immutable_key(key, self.getfield(obj, self.on_field), obj, self.on_field)
 
 
 class UniqueIndex[Obj, Key = typing.Any](Index[Obj, Obj, Key]):
