@@ -6,15 +6,10 @@ on:
 
 jobs:
   validate:
-    name: Validate and test on Python ${{ matrix.python-version }}
+    name: Validate and test
     runs-on: ubuntu-latest
     permissions:
       contents: read
-    strategy:
-      matrix:
-        python-version:
-          - "3.13"
-          - "3.14"
     
     steps:
       - name: Checkout release tag
@@ -38,10 +33,10 @@ jobs:
           test "$NAME" = "$VERSION"
 
       - name: Type-check
-        run: uvx hatch run dev:type-check
+        run: uvx hatch run dev-ci:type-check
 
       - name: Test
-        run: uvx hatch run dev:test
+        run: uvx hatch run dev-ci:test
 
   publish:
     name: Build and publish
