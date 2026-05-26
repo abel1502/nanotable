@@ -198,9 +198,11 @@ class Index[Obj, Result = typing.Any, Key = typing.Any](ABC, typing.Mapping[Key,
         return self._lookup.items()
     
     def __del__(self) -> None:
-        if not disable_safety_checks:
-            for key, obj in self.items():
-                verify_immutable_key(key, self.getfield(obj, self.on_field), obj, self.on_field)
+        if disable_safety_checks:
+            return
+        
+        for key, obj in self.items():
+            verify_immutable_key(key, self.getfield(obj, self.on_field), obj, self.on_field)
 
 
 class UniqueIndex[Obj, Key = typing.Any](Index[Obj, Obj, Key]):
