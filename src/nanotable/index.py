@@ -8,6 +8,7 @@ from nanotable.errors import ValidationError
 from nanotable.safety import disable_safety_checks, verify_immutable_key
 
 
+# TODO: Factor out the code for storing stuff in a dict into a separate subclass. OrderedIndex (or SortedIndex, however I might call that) probably wouldn't use a dict
 class Index[Obj, Result = typing.Any, Key = typing.Any](ABC, typing.Mapping[Key, Result]):
     __slots__ = (
         "_lookup",

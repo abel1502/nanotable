@@ -65,6 +65,8 @@ class Table[Elem, Indexes = _IndexDirectoryProxy[Elem]]:
         :param getfield: A `FieldGetter` to use for this table. Used to switch between mapping item, object attribute and other definitions of a field.
         """
         
+        # TODO: Default to of_objects, or to trying one then the other?
+        
         getfield_type_error = TypeError("You must specify either `of_objects`, `of_dicts` or a custom `getfield` function when creating a table")
         
         if of_objects:
@@ -277,6 +279,8 @@ class Table[Elem, Indexes = _IndexDirectoryProxy[Elem]]:
         self.remove(obj)
         yield
         self.add(obj)
+    
+    # TODO: rekey_on() which only removes from and re-adds to specific indexes
     
     def __iter__(self) -> typing.Iterator[Elem]:
         return iter(self.items())
