@@ -213,7 +213,7 @@ class Index[
         
         raise KeyError(f"Key {key!r} not found in index on {self.on_field!r}")
     
-    def _get_slice(self, keys: slice) -> typing.Iterable[Obj]:
+    def _get_slice(self, keys: slice[Key | None, Key | None, None]) -> typing.Iterable[Obj]:
         """
         Index-specific implementation for the behavior of `__getitem__` when the key is a slice.
         
@@ -229,14 +229,14 @@ class Index[
         raise TypeError(f"Slicing not supported for {type(self).__name__}")
     
     @typing.overload
-    def __getitem__(self, keys: slice) -> typing.Iterable[Obj]:
+    def __getitem__(self, keys: slice[Key | None, Key | None, None]) -> typing.Iterable[Obj]:
         ...  # Note: Supports ranged queries, raises an exception on non-sorted indexes
     
     @typing.overload
     def __getitem__(self, key: Key) -> Result:
         ...
 
-    def __getitem__(self, key: Key | slice):
+    def __getitem__(self, key: Key | slice[Key | None, Key | None, None]):
         if isinstance(key, slice):
             return self._get_slice(key)
         
@@ -429,7 +429,10 @@ try:
             :returns: An iterator over the elements whose keys fall in the range `[low:high]`.
             """
             
-            return itertools.chain.from_iterable(map(lambda key: self.result_items(self[key]), self._lookup.irange(
+            # Need the type annotation to help mypy consistently pick the correct overload
+            resolve_key: typing.Callable[[Key], typing.Iterable[Obj]] = lambda key: self.result_items(self[typing.cast(Key, key)])
+            
+            return itertools.chain.from_iterable(map(resolve_key, self._lookup.irange(
                 low,
                 high,
                 inclusive=(low_inclusive, high_inclusive),
@@ -437,7 +440,7 @@ try:
             )))
 
         @typing.override
-        def _get_slice(self, keys: slice) -> typing.Iterable[Obj]:
+        def _get_slice(self, keys: slice[Key | None, Key | None, None]) -> typing.Iterable[Obj]:
             if keys.step is not None:
                 raise TypeError("SortedUniqueIndex range query may only include `low:high`, a step is meaningless")
             

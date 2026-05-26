@@ -331,7 +331,7 @@ class Table[Elem, Indexes = _IndexDirectoryProxy[Elem]]:
         return len(self._contents)
     
     @typing.overload
-    def __getitem__(self, keys: slice) -> typing.Iterable[Elem]:
+    def __getitem__(self, keys: slice[typing.Any | None, typing.Any | None, None]) -> typing.Iterable[Elem]:
         """
         Looks up elements by a range of primary keys.
         
