@@ -206,5 +206,52 @@ class TestMultiIndex:
     def create(self, **kwargs) -> MultiIndex[dict[str, typing.Any]]:
         return MultiIndex("id", getfield_item, **kwargs)
     
-    # TODO: Tests
+    def test_normal(self) -> None:
+        index = self.create(required=True)
+        
+        obj1 = {"id": 1, "other": "foo"}
+        obj2 = {"id": 2, "other": "bar"}
+        obj3 = {"id": 3, "other": "baz"}
+        
+        index.register(obj1)
+        index.register(obj2)
+        index.register(obj3)
+        
+        assert index.get(1) == [obj1]
+        assert index.get(2) == [obj2]
+        assert index.get(3) == [obj3]
+        
+        assert index.get(4) == []
+        
+        index.unregister(obj1)
+        
+        assert index.get(1) == []
+        
+        assert index.get(1, [{"hello": "world"}]) == [{"hello": "world"}]
+        assert index.get(2, []) == [obj2]
+        
+        with pytest.raises(KeyError):
+            index.unregister(obj1)
+        
+        index.unregister(obj1, missing_ok=True)
+        index.unregister({"id": -1}, missing_ok=True)
+        
+        with pytest.raises(ValueError):
+            index.unregister({}, missing_ok=True)
+
+        with pytest.raises(ValueError):
+            index.register({})
+
+        with pytest.raises(ValueError):
+            index.register({"id": None})
+
+        index.register(obj1)
+        index.register(obj1)
+        
+        assert index.get(1) == [obj1, obj1]
+        
+        index.register({"id": 1, "other": None})
+        
+        assert len(index.get(1)) == 3
+        assert {"id": 1, "other": None} in index.get(1)
 

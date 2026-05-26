@@ -158,46 +158,74 @@ class Index[
         self._lookup.clear()
     
     @typing.overload
-    def get(self, key: typing.Any, /) -> Result:
+    def get(self, key: Key, /) -> Result:
         """
-        Retrieves the element with the given key.
+        Retrieves the element(s) with the given key.
         
         :param key: The key to look up.
         
-        :returns: The element with the given key.
+        :returns: The element(s) with the given key.
         
         :raises KeyError: If the key is not found in the index.
         """
     
     @typing.overload
-    def get[Default](self, key: typing.Any, default: Default, /) -> Result | Default:
+    def get[Default](self, key: Key, default: Default, /) -> Result | Default:
         """
-        Retrieves the element with the given key, or `default` if the key is not found in the index.
+        Retrieves the element(s) with the given key, or `default` if the key is not found in the index.
         
         :param key: The key to look up.
         :param default: The value to return if the key is not found in the index.
         
-        :returns: The element with the given key, or `default` if the key is not found in the index.
+        :returns: The element(s) with the given key, or `default` if the key is not found in the index.
         """
     
     def get(self, key, *args):
-        if len(args) == 1:
-            return self._lookup.get(key, args[0])
-        
-        if len(args) != 0:
+        if len(args) > 1:
             raise TypeError(f"get() has no overload with {len(args) + 1} positional arguments")
         
         result = self._lookup.get(key, MISSING)
         
         if result is MISSING:
-            raise KeyError(f"Key {key!r} not found in index on {self.on_field!r}")
-        
-        if not disable_safety_checks:
-            verify_immutable_key(key, self.getfield(result, self.on_field), result, self.on_field)
+            if len(args) == 0:
+                result = self._get_default(key)
+            else:
+                result = self._lookup.get(key, args[0])
+            
+        elif not disable_safety_checks:
+            for obj in self._flatten_results([result]):
+                verify_immutable_key(key, self.getfield(obj, self.on_field), obj, self.on_field)
         
         return result
     
+    def _get_default(self, key: Key) -> Result:
+        """
+        Index-specific implementation for the behavior of `get` when the key is not in the lookup table.
+        
+        Defaults to raising a `KeyError`.
+        
+        :param key: The key to look up.
+        
+        :returns: The element(s) associated with the given key.
+        
+        :raises KeyError: If the index decides to treat the absence of the key as an error.
+        """
+        
+        raise KeyError(f"Key {key!r} not found in index on {self.on_field!r}")
+    
     def _get_slice(self, keys: slice) -> typing.Iterable[Obj]:
+        """
+        Index-specific implementation for the behavior of `__getitem__` when the key is a slice.
+        
+        Defaults to raising a `TypeError`.
+        
+        :param keys: The slice to look up.
+        
+        :returns: The elements matching the lookup.
+        
+        :raises TypeError: If the index does not support slicing.
+        """
+        
         raise TypeError(f"Slicing not supported for {type(self).__name__}")
     
     @typing.overload
@@ -262,6 +290,12 @@ class Index[
             # In particular, I encountered situations where the index had no `_lookup` attribute
             # in __del__, which it had just prior.
             pass
+    
+    @abstractmethod
+    def _flatten_results(self, results: typing.Iterable[Result]) -> typing.Iterable[Obj]:
+        """
+        Unpacks a sequence of results into a sequence of individual objects.
+        """
 
 
 class UniqueIndex[Obj, Key = typing.Any](Index[Obj, Obj, Key]):
@@ -282,6 +316,10 @@ class UniqueIndex[Obj, Key = typing.Any](Index[Obj, Obj, Key]):
     @typing.override
     def _unregister(self, key: Key, elem: Obj) -> None:
         self._lookup.pop(key, None)
+    
+    @typing.override
+    def _flatten_results(self, results: typing.Iterable[Obj]) -> typing.Iterable[Obj]:
+        return results
 
 
 class PrimaryIndex[Obj, Key = typing.Any](UniqueIndex[Obj, Key]):
@@ -314,6 +352,8 @@ class MultiIndex[Obj, Key = typing.Any](Index[Obj, list[Obj], Key]):
     with a certain value of one of their fields.
     It is essentially the opposite of UniqueIndex.
     
+    When
+    
     TODO: List methods
     """
     
@@ -327,6 +367,17 @@ class MultiIndex[Obj, Key = typing.Any](Index[Obj, list[Obj], Key]):
     @typing.override
     def _unregister(self, key: Key, elem: Obj) -> None:
         self._lookup[key].remove(elem)
+        
+        if not self._lookup[key]:
+            self._lookup.pop(key, None)
+    
+    @typing.override
+    def _flatten_results(self, results: typing.Iterable[list[Obj]]) -> typing.Iterable[Obj]:
+        return itertools.chain.from_iterable(results)
+    
+    @typing.override
+    def _get_default(self, key: Key) -> list[Obj]:
+        return []
 
 
 __all__ = [
@@ -351,10 +402,6 @@ try:
         @typing.override
         def _init_lookup(cls) -> SortedDict[Key, Result]:
             return SortedDict()
-        
-        @abstractmethod
-        def _flatten_results(self, results: typing.Iterable[Result]) -> typing.Iterable[Obj]:
-            ...
         
         def get_range(
             self,
@@ -433,10 +480,6 @@ try:
         
         TODO: List methods
         """
-        
-        @typing.override
-        def _flatten_results(self, results: typing.Iterable[Obj]) -> typing.Iterable[Obj]:
-            return results
     
     
     class SortedPrimaryIndex[Obj, Key = typing.Any](PrimaryIndex[Obj, Key], SortedUniqueIndex[Obj, Key]):
@@ -459,10 +502,6 @@ try:
         
         TODO: List methods
         """
-        
-        @typing.override
-        def _flatten_results(self, results: typing.Iterable[list[Obj]]) -> typing.Iterable[Obj]:
-            return itertools.chain.from_iterable(results)
     
     
     __all__ += [
