@@ -32,10 +32,14 @@ dependencies = [
 ]
 
 [project.optional-dependencies]
+
+[dependency-groups]
 dev = [
-    "pytest>=9.0.3",
-    "pytest-cov>=7.1.0",
-    "pytest-mock>=3.15.1",
+  "coverage>=7.14.0",
+  "mypy>=2.1.0",
+  "pytest>=9.0.3",
+  "pytest-cov>=7.1.0",
+  "pytest-mock>=3.15.1",
 ]
 
 [project.urls]
@@ -49,16 +53,12 @@ path = "src/nanotable/__about__.py"
 [tool.hatch.build]
 reproducible = false
 
-[tool.hatch.envs.types]
-features = ["dev"]
-extra-dependencies = [
-  "mypy>=1.0.0",
-]
-[tool.hatch.envs.types.scripts]
-check = "mypy --install-types --non-interactive {args:src/nanotable tests}"
+[tool.hatch.envs.dev]
+dependency-groups = ["dev"]
 
-[tool.hatch.envs.hatch-test]
-features = ["dev"]
+[tool.hatch.envs.dev.scripts]
+type-check = "mypy --install-types --non-interactive {args:src/nanotable tests}"
+test = "pytest {args}"
 
 [tool.coverage.run]
 source_pkgs = ["nanotable", "tests"]
