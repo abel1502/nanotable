@@ -45,5 +45,4 @@ class TestTable:
         
         table.clear()
         assert len(table) == 0
-        
 

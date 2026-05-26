@@ -235,7 +235,7 @@ class Table[Elem, Indexes = _IndexDirectoryProxy[Elem]]:
         :raises KeyError: If `missing_ok` is `False` and the element does not exist in the table.
         """
         
-        # TODO: Also make a transaction? Shouldn't normally fail
+        # TODO: Also wrap in a transaction? Shouldn't normally fail
         
         if not missing_ok and elem not in self:
             raise KeyError(f"Attempting to remove {elem!r} which is not in the table")
