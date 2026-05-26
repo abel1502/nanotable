@@ -237,11 +237,17 @@ class Index[
         return self._lookup.items()
     
     def __del__(self) -> None:
-        if disable_safety_checks:
-            return
-        
-        for key, obj in self.items():
-            verify_immutable_key(key, self.getfield(obj, self.on_field), obj, self.on_field)
+        try:
+            if disable_safety_checks:
+                return
+            
+            for key, obj in self.items():
+                verify_immutable_key(key, self.getfield(obj, self.on_field), obj, self.on_field)
+        except:
+            # Nothing is guaranteed for a destructor, so we can't guarantee anything either
+            # In particular, I encountered situations where the index had no `_lookup` attribute
+            # in __del__, which it had just prior.
+            pass
 
 
 class UniqueIndex[Obj, Key = typing.Any](Index[Obj, Obj, Key]):
@@ -302,9 +308,6 @@ try:
     
     if typing.TYPE_CHECKING:
         from sortedcontainers import SortedKeysView, SortedValuesView, SortedItemsView  # type: ignore[import-not-found]
-
-
-    # TODO: SortedIndex with `[low:high]` syntax
     
     
     class SortedUniqueIndex[Obj, Key = typing.Any](UniqueIndex[Obj, Key]):

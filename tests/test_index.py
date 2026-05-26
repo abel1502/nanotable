@@ -4,7 +4,7 @@ import typing
 import pytest
 
 import nanotable.index
-from nanotable.index import UniqueIndex
+from nanotable.index import UniqueIndex, PrimaryIndex
 from nanotable.field import dict_getter
 from nanotable.errors import ValidationError
 
@@ -16,12 +16,14 @@ def test_public() -> None:
     assert "UniqueIndex" in exported
     assert "PrimaryIndex" in exported
     # assert "MultiIndex" in exported
-    # assert "OrderedIndex" in exported
 
 
 class TestUniqueIndex:
+    def create(self, **kwargs) -> UniqueIndex[dict[str, typing.Any]]:
+        return UniqueIndex("id", dict_getter, **kwargs)
+    
     def test_normal(self) -> None:
-        index: UniqueIndex[dict[str, typing.Any]] = UniqueIndex("id", dict_getter, required=True)
+        index = self.create(required=True)
         
         obj1 = {"id": 1, "other": "foo"}
         obj2 = {"id": 2, "other": "bar"}
@@ -65,7 +67,7 @@ class TestUniqueIndex:
 
 
     def test_none_valued(self) -> None:
-        index: UniqueIndex[dict[str, typing.Any]] = UniqueIndex("id", dict_getter, required=True, none_means_empty=False)
+        index = self.create(required=True, none_means_empty=False)
         
         obj = {"id": None, "other": "foo"}
         
@@ -81,7 +83,7 @@ class TestUniqueIndex:
 
 
     def test_optional(self) -> None:
-        index: UniqueIndex[dict[str, typing.Any]] = UniqueIndex("id", dict_getter, required=False)
+        index = self.create(required=False)
         
         obj1 = {"id": 1, "other": "foo"}
         obj2 = {"other": "bar"}
@@ -102,7 +104,7 @@ class TestUniqueIndex:
 
 
     def test_optional_none_valued(self) -> None:
-        index: UniqueIndex[dict[str, typing.Any]] = UniqueIndex("id", dict_getter, required=False, none_means_empty=False)
+        index = self.create(required=False, none_means_empty=False)
         
         obj1 = {"id": 1, "other": "foo"}
         obj2 = {"other": "bar"}
@@ -122,7 +124,7 @@ class TestUniqueIndex:
 
 
     def test_get_overloads(self) -> None:
-        index: UniqueIndex[dict[str, typing.Any]] = UniqueIndex("id", dict_getter, required=True)
+        index = self.create(required=True)
         
         obj = {"id": 1}
         index.register(obj)
@@ -136,4 +138,18 @@ class TestUniqueIndex:
         
         with pytest.raises(TypeError):
             index.get(1, None, None)  # type: ignore
+
+
+class TestPrimaryIndex:
+    def create(self, **kwargs) -> PrimaryIndex[dict[str, typing.Any]]:
+        return PrimaryIndex("id", dict_getter, **kwargs)
+    
+    def test_defaults(self) -> None:
+        index = self.create()
+        
+        assert isinstance(index, UniqueIndex)
+        assert index.required
+        
+        with pytest.raises(TypeError):
+            self.create(required=False)
 
