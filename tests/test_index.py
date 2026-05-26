@@ -4,7 +4,7 @@ import typing
 import pytest
 
 import nanotable.index
-from nanotable.index import UniqueIndex, PrimaryIndex
+from nanotable.index import UniqueIndex, PrimaryIndex, MultiIndex
 from nanotable.field import getfield_item
 from nanotable.errors import ValidationError
 from nanotable.safety import IndexedFieldChangedWarning
@@ -16,7 +16,7 @@ def test_public() -> None:
     assert "Index" in exported
     assert "UniqueIndex" in exported
     assert "PrimaryIndex" in exported
-    # assert "MultiIndex" in exported
+    assert "MultiIndex" in exported
 
 
 class TestUniqueIndex:
@@ -200,4 +200,11 @@ class TestPrimaryIndex:
         
         with pytest.raises(TypeError):
             self.create(required=False)
+
+
+class TestMultiIndex:
+    def create(self, **kwargs) -> MultiIndex[dict[str, typing.Any]]:
+        return MultiIndex("id", getfield_item, **kwargs)
+    
+    # TODO: Tests
 

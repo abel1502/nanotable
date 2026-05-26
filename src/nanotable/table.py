@@ -27,6 +27,7 @@ class Table[Elem, Indexes = _IndexDirectoryProxy[Elem]]:
         "_indexes",
     )
     
+    # TODO: instead of list[Elem], use Group[Elem]?
     _contents: list[Elem] | PrimaryIndex[Elem]
     _getfield: FieldGetter[Elem]
     _indexes: dict[str, Index[Elem]]

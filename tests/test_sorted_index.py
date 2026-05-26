@@ -6,14 +6,15 @@ import pytest
 pytest.importorskip("sortedcontainers")
 
 import nanotable.index
-from nanotable.index import SortedUniqueIndex, SortedPrimaryIndex
+from nanotable.index import SortedUniqueIndex, SortedPrimaryIndex, SortedMultiIndex
 from nanotable.field import getfield_item
 
 def test_public() -> None:
     exported = nanotable.index.__all__
     
     assert "SortedUniqueIndex" in exported
-    # assert "SortedMultiIndex" in exported
+    assert "SortedPrimaryIndex" in exported
+    assert "SortedMultiIndex" in exported
 
 
 class TestSortedUniqueIndex:
@@ -153,10 +154,14 @@ class TestSortedPrimaryIndex:
     def create(self, **kwargs) -> SortedPrimaryIndex[dict[str, typing.Any]]:
         return SortedPrimaryIndex("id", getfield_item, **kwargs)
     
-    def test_inherits(self) -> None:
+    def test_inherits_unique(self) -> None:
         index = self.create()
         
         assert isinstance(index, SortedUniqueIndex)
+    
+    def test_inherits_primary(self) -> None:
+        index = self.create()
+        
         assert isinstance(index, nanotable.index.PrimaryIndex)
     
     def test_defaults(self) -> None:
@@ -166,4 +171,16 @@ class TestSortedPrimaryIndex:
         
         with pytest.raises(TypeError):
             self.create(required=False)
+
+
+class TestSortedMultiIndex:
+    def create(self, **kwargs) -> SortedMultiIndex[dict[str, typing.Any]]:
+        return SortedMultiIndex("id", getfield_item, **kwargs)
+    
+    def test_inherits_multi(self) -> None:
+        index = self.create()
+        
+        assert isinstance(index, nanotable.index.MultiIndex)
+    
+    # TODO: Tests
 

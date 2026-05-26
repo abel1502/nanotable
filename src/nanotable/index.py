@@ -286,7 +286,8 @@ class UniqueIndex[Obj, Key = typing.Any](Index[Obj, Obj, Key]):
 
 class PrimaryIndex[Obj, Key = typing.Any](UniqueIndex[Obj, Key]):
     """
-    A primary index is a special kind of unique index that also acts as the primary storage for the table's entries.
+    A primary index is a special kind of unique index that
+    also acts as the primary storage for the table's entries.
     
     TODO: List methods
     """
@@ -306,14 +307,33 @@ class PrimaryIndex[Obj, Key = typing.Any](UniqueIndex[Obj, Key]):
         )
 
 
-# TODO: MultiIndex with duplicates allowed
+# TODO: instead of list[Obj], use Group[Obj]
+class MultiIndex[Obj, Key = typing.Any](Index[Obj, list[Obj], Key]):
+    """
+    A multi-index is an index that lets you look up all elements
+    with a certain value of one of their fields.
+    It is essentially the opposite of UniqueIndex.
+    
+    TODO: List methods
+    """
+    
+    @typing.override
+    def _register(self, key: Key, elem: Obj) -> None:
+        if key not in self._lookup:
+            self._lookup[key] = []
+        
+        self._lookup[key].append(elem)
+    
+    @typing.override
+    def _unregister(self, key: Key, elem: Obj) -> None:
+        self._lookup[key].remove(elem)
 
 
 __all__ = [
     "Index",
     "UniqueIndex",
     "PrimaryIndex",
-    # "MultiIndex",
+    "MultiIndex",
 ]
 
 
@@ -408,7 +428,7 @@ try:
     
     class SortedUniqueIndex[Obj, Key = typing.Any](_SortedIndexMixin[Obj, Obj, Key], UniqueIndex[Obj, Key]):
         """
-        A variant of unique index that also maintains the sorted order of
+        A variant of UniqueIndex that also maintains the sorted order of
         the keys, enabling efficient range queries.
         
         TODO: List methods
@@ -421,17 +441,34 @@ try:
     
     class SortedPrimaryIndex[Obj, Key = typing.Any](PrimaryIndex[Obj, Key], SortedUniqueIndex[Obj, Key]):
         """
-        A variant of primary index that also maintains the sorted order of
+        A variant of PrimaryIndex that also maintains the sorted order of
         the keys, enabling efficient range queries.
         
         TODO: List methods
         """
     
     
+    class SortedMultiIndex[Obj, Key = typing.Any](_SortedIndexMixin[Obj, list[Obj], Key], MultiIndex[Obj, Key]):
+        """
+        A variant of MultiIndex that also maintains the sorted order of
+        the keys, enabling efficient range queries.
+        
+        .. Note::
+            The order of the elements with the same value of the indexed field
+            returned for any ranged query is unspecified.
+        
+        TODO: List methods
+        """
+        
+        @typing.override
+        def _flatten_results(self, results: typing.Iterable[list[Obj]]) -> typing.Iterable[Obj]:
+            return itertools.chain.from_iterable(results)
+    
+    
     __all__ += [
         "SortedUniqueIndex",
         "SortedPrimaryIndex",
-        # "SortedMultiIndex",
+        "SortedMultiIndex",
     ]
 except ModuleNotFoundError:
     pass
