@@ -88,6 +88,12 @@ table.index_on("name", required=True)
 table.index_on("phone")
 ```
 
+### Indexes
+
+TODO: UniqueIndex, PrimaryIndex, MultiIndex
+
+TODO: `[sorted]` extra and SortedUniqueIndex, SortedPrimaryIndex, SortedMultiIndex
+
 ### Caveats
 
 Indexed fields must be hashable, like with the built-in `dict`. This already

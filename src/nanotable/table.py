@@ -18,26 +18,7 @@ class Table[Elem, Indexes = _IndexDirectoryProxy[Elem]]:
     Under the hood, it uses several `dict`s (and sometimes a `list`) to store the data and
     provide efficient access to it both in terms of memory and time.
     
-    You should use a `Table` in several situations, including:
-    
-    - When you want to look up items by one of their fields, instead of a `dict`. A `Table`
-      is as efficient as a `dict` for this use case, but provides additional features, such
-      as checking for the existence of an element with a simple `in` check; changing the value
-      of the key field with `Table.rekey`, or catching accidental changes to the key field automatically.
-    
-    - When you want to look up items by one of several fields. This includes the situations
-      you would use a `bidict`. While that's also a great tool, with a `Table` you can attach
-      non-hashable metadata to your elements without associated lookup, which is not possible
-      with a `bidict`. A `Table` also allows you to index on more than two fields.
-    
-    - When you want to have a quick database for objects that you would prefer not to serialize.
-      Using a conventional database would require you to serialize and deserialize the objects
-      into the data model of the database, which might be too simple to express what your objects are.
-      Running a database also comes with a significant overhead cost, which might be a big deal for
-      a lightweight application. Interacting with a database also introduces a plethora of potential
-      falure scenarios, possibly pollutes your code with `async` or (worse) blocking synchronous calls
-      that might time out unexpectedly, connection pools, synchronization... A `Table` is as
-      as lightweight as any other data structure, but provides largely the same functionality as a database.
+    TODO: List methods
     """
     
     __slots__ = (
@@ -340,6 +321,7 @@ class Table[Elem, Indexes = _IndexDirectoryProxy[Elem]]:
         if self.has_primary_index:
             return self.primary_index.values()
         
+        # TODO: ListView or something
         return iter(self._contents)
 
 

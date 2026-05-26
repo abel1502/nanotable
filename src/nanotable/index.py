@@ -1,7 +1,7 @@
 from __future__ import annotations
 import typing
 from abc import ABC, abstractmethod
-import warnings
+import itertools
 
 from nanotable.field import FieldGetter, MISSING, typeof_MISSING
 from nanotable.errors import ValidationError
@@ -9,7 +9,23 @@ from nanotable.safety import disable_safety_checks, verify_immutable_key
 
 
 # TODO: Factor out the code for storing stuff in a dict into a separate subclass. OrderedIndex (or SortedIndex, however I might call that) probably wouldn't use a dict
-class Index[Obj, Result = typing.Any, Key = typing.Any](ABC, typing.Mapping[Key, Result]):
+class Index[
+    Obj,
+    Result = typing.Any,
+    Key = typing.Any,
+](ABC, typing.Mapping[Key, Result]):
+    """
+    The base class for all indexes.
+    
+    Largely provides a default implementation. While this is known to impact flexibility,
+    it also offers guarantees to the user. If you wish to write a custom index and cannot
+    figure out a way to make the typing work with inheriting from Index, create an
+    issue on GitHub with an explanation of your use case and I'll consider generalizing
+    this base class for you.
+    
+    TODO: List methods
+    """
+    
     __slots__ = (
         "_lookup",
         "on_field",
@@ -18,7 +34,7 @@ class Index[Obj, Result = typing.Any, Key = typing.Any](ABC, typing.Mapping[Key,
         "required",
     )
     
-    _lookup: dict[Key, Result]
+    _lookup: typing.MutableMapping[Key, Result]
     on_field: str
     getfield: FieldGetter
     none_means_empty: bool
@@ -44,11 +60,19 @@ class Index[Obj, Result = typing.Any, Key = typing.Any](ABC, typing.Mapping[Key,
             Defaults to `False`.
         """
         
-        self._lookup = {}
+        self._lookup = self._init_lookup()
         self.on_field = on_field
         self.getfield = getfield
         self.none_means_empty = none_means_empty
         self.required = required
+    
+    @classmethod
+    def _init_lookup(cls) -> typing.MutableMapping[Key, Result]:
+        """
+        Index-specific implementation for creating the underlying storage. Normally a `dict`.
+        """
+        
+        return {}
     
     def register(self, elem: Obj) -> None:
         """
@@ -187,14 +211,29 @@ class Index[Obj, Result = typing.Any, Key = typing.Any](ABC, typing.Mapping[Key,
     
     @typing.override
     def keys(self) -> typing.KeysView[Key]:
+        """
+        Returns the keys of the objects registered in the index.
+        The order is unspecified.
+        """
+        
         return self._lookup.keys()
     
     @typing.override
     def values(self) -> typing.ValuesView[Result]:
+        """
+        Returns the objects registered in the index.
+        The order is unspecified.
+        """
+        
         return self._lookup.values()
     
     @typing.override
     def items(self) -> typing.ItemsView[Key, Result]:
+        """
+        Returns the key-object pairs for the objects registered in the index.
+        The order is unspecified.
+        """
+        
         return self._lookup.items()
     
     def __del__(self) -> None:
@@ -208,6 +247,8 @@ class Index[Obj, Result = typing.Any, Key = typing.Any](ABC, typing.Mapping[Key,
 class UniqueIndex[Obj, Key = typing.Any](Index[Obj, Obj, Key]):
     """
     A unique index lets you look up the single element with a certain value of one of the fields.
+    
+    TODO: List methods
     """
     
     @typing.override
@@ -226,6 +267,8 @@ class UniqueIndex[Obj, Key = typing.Any](Index[Obj, Obj, Key]):
 class PrimaryIndex[Obj, Key = typing.Any](UniqueIndex[Obj, Key]):
     """
     A primary index is a special kind of unique index that also acts as the primary storage for the table's entries.
+    
+    TODO: List methods
     """
     
     def __init__(
@@ -241,19 +284,142 @@ class PrimaryIndex[Obj, Key = typing.Any](UniqueIndex[Obj, Key]):
             none_means_empty=none_means_empty,
             required=True,
         )
-    
-    def all(self) -> typing.Iterable[Obj]:
-        return self.values()
 
 
 # TODO: MultiIndex with duplicates allowed
-
-
-# TODO: OrderedIndex with `[low:high]` syntax
 
 
 __all__ = [
     "Index",
     "UniqueIndex",
     "PrimaryIndex",
+    # "MultiIndex",
 ]
+
+
+try:
+    from sortedcontainers import SortedDict  # type: ignore[import-not-found]
+    
+    if typing.TYPE_CHECKING:
+        from sortedcontainers import SortedKeysView, SortedValuesView, SortedItemsView  # type: ignore[import-not-found]
+
+
+    # TODO: SortedIndex with `[low:high]` syntax
+    
+    
+    class SortedUniqueIndex[Obj, Key = typing.Any](UniqueIndex[Obj, Key]):
+        """
+        A variant of unique index that also maintains the sorted order of
+        the keys, enabling efficient range queries.
+        
+        TODO: List methods
+        """
+        
+        _lookup: SortedDict[Key, Obj]
+        
+        @classmethod
+        @typing.override
+        def _init_lookup(cls) -> SortedDict[Key, Obj]:
+            return SortedDict()
+        
+        def get_range(
+            self,
+            *,
+            low: Key | None = None,
+            high: Key | None = None,
+            low_inclusive: bool = True,
+            high_inclusive: bool = True,
+            reverse: bool = False,
+        ) -> typing.Iterator[Obj]:
+            """
+            Retrieves all elements whose keys fall in the range from `low` to `high`.
+            
+            :param low: The lower bound of the range.
+                If `None`, the lower bound is effectively the lowest possible key.
+            :param high: The upper bound of the range.
+                If `None`, the upper bound is effectively the highest possible key.
+            :param low_inclusive: Whether the lower bound is inclusive.
+                Ignored if `low` is `None`. Defaults to `True`.
+            :param high_inclusive: Whether the upper bound is inclusive.
+                Ignored if `high` is `None`. Defaults to `True`.
+            :param reverse: Whether to iterate over the elements in reverse order.
+                `low` should still be less than or equal to `high`, else you will get an empty result.
+            
+            :returns: An iterator over the elements whose keys fall in the range `[low:high]`.
+            """
+            
+            return map(lambda key: self[key], self._lookup.irange(
+                low,
+                high,
+                inclusive=(low_inclusive, high_inclusive),
+                reverse=reverse,
+            ))
+
+        @typing.overload
+        def __getitem__(self, key: Key) -> Obj:
+            ...
+        
+        @typing.overload
+        def __getitem__(self, key: slice) -> typing.Iterator[Obj]:
+            """
+            Retrieves all elements whose keys fall in the range `[low, high)`.
+            
+            .. Note:
+                Unlike with `get_range`, the default (and only) behavior is
+                to include the lower bound but **exclude** the upper bound. This is
+                to maintain consistency with Python's sequence slicing behavior.
+                If you need any other behavior, use `get_range` instead.
+            
+            :param key: The slice to look up.
+                `start` is the lower bound (optional),
+                `stop` is the higher bound (optional),
+                `step` must be `None`.
+            
+            :returns: An iterator over the elements whose keys fall in the range `[low:high)`.
+            """
+
+        def __getitem__(self, key: Key | slice):
+            if isinstance(key, slice):
+                if key.step is not None:
+                    raise TypeError("SortedUniqueIndex range query may only include `low:high`, a step is meaningless")
+                
+                return self.get_range(
+                    low=key.start,
+                    high=key.stop,
+                    low_inclusive=True,
+                    high_inclusive=False,
+                )
+            
+            return super().__getitem__(key)
+        
+        @typing.override
+        def keys(self) -> SortedKeysView[Key]:
+            """
+            Returns the keys of the objects registered in the index, in sorted order.
+            """
+            
+            return self._lookup.keys()
+        
+        @typing.override
+        def values(self) -> SortedValuesView[Obj]:
+            """
+            Returns the ovjects registered in the index, in sorted order of their keys.
+            """
+            
+            return self._lookup.values()
+        
+        @typing.override
+        def items(self) -> SortedItemsView[Key, Obj]:
+            """
+            Returns the key-object pairs for the objects registered in the index, in sorted order of their keys.
+            """
+            
+            return self._lookup.items()
+    
+    
+    __all__ += [
+        "SortedUniqueIndex",
+        # "SortedMultiIndex",
+    ]
+except ModuleNotFoundError:
+    pass

@@ -32,6 +32,10 @@ dependencies = [
 ]
 
 [project.optional-dependencies]
+sorted = [
+  "sortedcontainers>=2.4.0",
+  "sortedcontainers-stubs>=2.4.3",
+]
 
 [dependency-groups]
 dev = [
@@ -59,6 +63,21 @@ dependency-groups = ["dev"]
 [tool.hatch.envs.dev.scripts]
 type-check = "mypy --install-types --non-interactive {args:src/nanotable tests}"
 test = "pytest {args}"
+
+[tool.hatch.envs.dev-ci]
+template = "dev"
+
+[tool.hatch.envs.dev-ci.scripts]
+test = "pytest --cache-clear {args}"
+
+[tool.hatch.envs.dev-ci.overrides]
+matrix.with-sorted.features = [
+  { value = "sorted", if = ["with-sorted"] },
+]
+
+[[tool.hatch.envs.dev-ci.matrix]]
+python = ["3.13", "3.14"]
+with-sorted = ["no-sorted", "with-sorted"]
 
 [tool.coverage.run]
 source_pkgs = ["nanotable", "tests"]
