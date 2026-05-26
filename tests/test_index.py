@@ -185,7 +185,12 @@ class TestUniqueIndex:
         assert len(index) == 3
         
         assert set(index) == set(index.keys())
+    
+    def test_no_slice(self) -> None:
+        index = self.create(required=True)
         
+        with pytest.raises(TypeError):
+            index[:]
 
 
 class TestPrimaryIndex:
@@ -254,4 +259,10 @@ class TestMultiIndex:
         
         assert len(index.get(1)) == 3
         assert {"id": 1, "other": None} in index.get(1)
+        
+        index.unregister(obj1)
+        index.unregister(obj1)
+        index.unregister(index.get(1)[0])
+        
+        assert index.get(1) == []
 

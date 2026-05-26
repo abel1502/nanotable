@@ -14,7 +14,7 @@ class PrimaryIndexError(Exception):
     """
 
 
-class FeatureError(Exception):
+class FeatureError(Exception):  # pragma: no cover # The coverage report doesn't include tests with disabled options
     """
     An exception signaling that an extra necessary for a certain feature isn't installed
     """
