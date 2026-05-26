@@ -15,12 +15,12 @@ type FieldGetter[Obj] = typing.Callable[[Obj, str], typing.Any | typeof_MISSING]
 
 
 # TODO: Rename?
-def attr_getter(obj: object, key: str) -> typing.Any | typeof_MISSING:
+def getfield_attr(obj: object, key: str) -> typing.Any | typeof_MISSING:
     return getattr(obj, key, MISSING)
 
 
 # TODO: Rename?
-def dict_getter(obj: dict[str, typing.Any], key: str) -> typing.Any | typeof_MISSING:
+def getfield_item(obj: dict[str, typing.Any], key: str) -> typing.Any | typeof_MISSING:
     return obj.get(key, MISSING)
 
 
@@ -28,7 +28,7 @@ __all__ = [
     "MISSING",
     "typeof_MISSING",
     "FieldGetter",
-    "attr_getter",
-    "dict_getter",
+    "getfield_attr",
+    "getfield_item",
 ]
 

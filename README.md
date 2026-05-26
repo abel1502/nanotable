@@ -44,7 +44,7 @@ pip install nanotable
 A basic usage example is given below:
 
 ```python
-from nanotable import Table, dict_getter
+from nanotable import Table, getfield_item
 
 table = Table(of_dicts=True)\
     .index_on("name", required=True)\
@@ -60,9 +60,9 @@ table.by.phone["987-654-3210"]  # {"name": "Jane Doe", "phone": "987-654-3210", 
 table.remove(table.by.name["Barrack Obama"])
 ```
 
-You can store any kind of object in the table. Specify `of_dicts=True` or `getfield=dict_getter`
+You can store any kind of object in the table. Specify `of_dicts=True` or `getfield=getfield_item`
 to use mappings (`dict` or anything with `obj[key]` item access); `of_objects=True` or
-`getfield=attr_getter` to use objects with attributes (`obj.key` access); or
+`getfield=getfield_attr` to use objects with attributes (`obj.key` access); or
 any function with the signature `(obj, key: str) -> Any | MISSING` as `getfield`.
 
 ### Typing

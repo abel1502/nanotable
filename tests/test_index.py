@@ -5,7 +5,7 @@ import pytest
 
 import nanotable.index
 from nanotable.index import UniqueIndex, PrimaryIndex
-from nanotable.field import dict_getter
+from nanotable.field import getfield_item
 from nanotable.errors import ValidationError
 from nanotable.safety import IndexedFieldChangedWarning
 
@@ -21,7 +21,7 @@ def test_public() -> None:
 
 class TestUniqueIndex:
     def create(self, **kwargs) -> UniqueIndex[dict[str, typing.Any]]:
-        return UniqueIndex("id", dict_getter, **kwargs)
+        return UniqueIndex("id", getfield_item, **kwargs)
     
     def test_normal(self) -> None:
         index = self.create(required=True)
@@ -190,7 +190,7 @@ class TestUniqueIndex:
 
 class TestPrimaryIndex:
     def create(self, **kwargs) -> PrimaryIndex[dict[str, typing.Any]]:
-        return PrimaryIndex("id", dict_getter, **kwargs)
+        return PrimaryIndex("id", getfield_item, **kwargs)
     
     def test_defaults(self) -> None:
         index = self.create()

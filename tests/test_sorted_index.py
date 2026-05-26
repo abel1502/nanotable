@@ -7,7 +7,7 @@ pytest.importorskip("sortedcontainers")
 
 import nanotable.index
 from nanotable.index import SortedUniqueIndex
-from nanotable.field import dict_getter
+from nanotable.field import getfield_item
 
 def test_public() -> None:
     exported = nanotable.index.__all__
@@ -18,7 +18,7 @@ def test_public() -> None:
 
 class TestSortedUniqueIndex:
     def create(self, **kwargs) -> SortedUniqueIndex[dict[str, typing.Any]]:
-        return SortedUniqueIndex("id", dict_getter, **kwargs)
+        return SortedUniqueIndex("id", getfield_item, **kwargs)
     
     def test_inherits_unique(self) -> None:
         index = self.create(required=True)

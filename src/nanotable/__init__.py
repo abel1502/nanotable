@@ -1,6 +1,6 @@
 from .table import Table
 from .index import Index, UniqueIndex, PrimaryIndex
-from .field import FieldGetter, attr_getter, dict_getter, MISSING, typeof_MISSING
+from .field import FieldGetter, getfield_attr, getfield_item, MISSING, typeof_MISSING
 from .errors import ValidationError, PrimaryIndexError
 from .__about__ import __version__
 
@@ -10,8 +10,8 @@ __all__ = [
     "UniqueIndex",
     "PrimaryIndex",
     "FieldGetter",
-    "attr_getter",
-    "dict_getter",
+    "getfield_attr",
+    "getfield_item",
     "MISSING",
     "typeof_MISSING",
     "ValidationError",

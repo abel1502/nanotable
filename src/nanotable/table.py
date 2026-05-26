@@ -5,7 +5,7 @@ from functools import partial
 
 from nanotable.index import Index, PrimaryIndex, UniqueIndex
 from nanotable.transaction import Transaction
-from nanotable.field import FieldGetter, attr_getter, dict_getter, MISSING
+from nanotable.field import FieldGetter, getfield_attr, getfield_item, MISSING
 from nanotable.errors import PrimaryIndexError
 
 
@@ -53,11 +53,11 @@ class Table[Elem, Indexes = _IndexDirectoryProxy[Elem]]:
         if of_objects:
             if of_dicts or getfield is not None:
                 raise getfield_type_error
-            getfield = typing.cast(FieldGetter[Elem], attr_getter)
+            getfield = typing.cast(FieldGetter[Elem], getfield_attr)
         elif of_dicts:
             if of_objects or getfield is not None:
                 raise getfield_type_error
-            getfield = typing.cast(FieldGetter[Elem], dict_getter)
+            getfield = typing.cast(FieldGetter[Elem], getfield_item)
         elif getfield is None:
             raise getfield_type_error
         
