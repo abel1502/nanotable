@@ -196,8 +196,22 @@ class Index[
             verify_immutable_key(key, self.getfield(result, self.on_field), result, self.on_field)
         
         return result
-
+    
+    def _get_slice(self, keys: slice) -> typing.Iterable[Obj]:
+        raise TypeError(f"Slicing not supported for {type(self).__name__}")
+    
+    @typing.overload
+    def __getitem__(self, keys: slice) -> typing.Iterable[Obj]:
+        ...  # Note: Supports ranged queries, raises an exception on non-sorted indexes
+    
+    @typing.overload
     def __getitem__(self, key: Key) -> Result:
+        ...
+
+    def __getitem__(self, key: Key | slice):
+        if isinstance(key, slice):
+            return self._get_slice(key)
+        
         return self.get(key)
     
     def __contains__(self, key: object) -> bool:
@@ -355,42 +369,17 @@ try:
                 reverse=reverse,
             )))
 
-        @typing.overload
-        def __getitem__(self, key: Key) -> Result:
-            ...
-        
-        @typing.overload
-        def __getitem__(self, key: slice) -> typing.Iterator[Obj]:
-            """
-            Retrieves all elements whose keys fall in the range `[low, high)`.
+        @typing.override
+        def _get_slice(self, keys: slice) -> typing.Iterable[Obj]:
+            if keys.step is not None:
+                raise TypeError("SortedUniqueIndex range query may only include `low:high`, a step is meaningless")
             
-            .. Note:
-                Unlike with `get_range`, the default (and only) behavior is
-                to include the lower bound but **exclude** the upper bound. This is
-                to maintain consistency with Python's sequence slicing behavior.
-                If you need any other behavior, use `get_range` instead.
-            
-            :param key: The slice to look up.
-                `start` is the lower bound (optional),
-                `stop` is the higher bound (optional),
-                `step` must be `None`.
-            
-            :returns: An iterator over the elements whose keys fall in the range `[low:high)`.
-            """
-
-        def __getitem__(self, key: Key | slice):
-            if isinstance(key, slice):
-                if key.step is not None:
-                    raise TypeError("SortedUniqueIndex range query may only include `low:high`, a step is meaningless")
-                
-                return self.get_range(
-                    low=key.start,
-                    high=key.stop,
-                    low_inclusive=True,
-                    high_inclusive=False,
-                )
-            
-            return super().__getitem__(key)
+            return self.get_range(
+                low=keys.start,
+                high=keys.stop,
+                low_inclusive=True,
+                high_inclusive=False,
+            )
         
         @typing.override
         def keys(self) -> SortedKeysView[Key]:

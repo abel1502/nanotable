@@ -11,4 +11,5 @@ def test_exports() -> None:
     
     assert "ValidationError" in exports
     assert "PrimaryIndexError" in exports
+    assert "FeatureError" in exports
 

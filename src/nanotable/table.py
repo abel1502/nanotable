@@ -6,7 +6,7 @@ from functools import partial
 from nanotable.index import Index, PrimaryIndex, UniqueIndex
 from nanotable.transaction import Transaction
 from nanotable.field import FieldGetter, getfield_attr, getfield_item, MISSING
-from nanotable.errors import PrimaryIndexError
+from nanotable.errors import PrimaryIndexError, FeatureError
 
 
 class Table[Elem, Indexes = _IndexDirectoryProxy[Elem]]:
@@ -70,6 +70,7 @@ class Table[Elem, Indexes = _IndexDirectoryProxy[Elem]]:
         field: str,
         *,
         none_means_empty: bool = True,
+        sorted: bool = False,
     ) -> typing.Self:
         """
         Creates a new primary index on a specific field.
@@ -87,7 +88,7 @@ class Table[Elem, Indexes = _IndexDirectoryProxy[Elem]]:
         
         :returns: The table instance for convenient chaining.
         
-        :raises PrimaryIndexError: If a primary index already exists.
+        :raises PrimaryIndexError: If a primary index couldn't be created.
         """
         
         if self.has_primary_index:
@@ -95,12 +96,28 @@ class Table[Elem, Indexes = _IndexDirectoryProxy[Elem]]:
                 f"Cannot create new primary index on {field!r} because a primary index already exists on {self.primary_index.on_field!r}",
             )
         
-        index: PrimaryIndex[Elem] = PrimaryIndex(field, self._getfield, none_means_empty=none_means_empty)
+        if field in self._indexes:
+            raise PrimaryIndexError(
+                f"Cannot create new primary index on {field!r} because another index already exists on that field",
+            )
+        
+        kind: type[PrimaryIndex[Elem]] = PrimaryIndex
+        
+        if sorted:
+            try:
+                from nanotable.index import SortedPrimaryIndex
+            except NameError:
+                raise FeatureError("sorted")
+            
+            kind = SortedPrimaryIndex
+        
+        index: PrimaryIndex[Elem] = kind(field, self._getfield, none_means_empty=none_means_empty)
         
         for item in self._contents:
             index.register(item)
         
         self._contents = index
+        self._indexes[field] = index
         
         return self
     
@@ -108,6 +125,7 @@ class Table[Elem, Indexes = _IndexDirectoryProxy[Elem]]:
         self,
         field: str,
         kind: type[Index] = UniqueIndex,
+        # TODO: Support inferring index kind from several flags?
         *,
         none_means_empty: bool = True,
         required: bool = False,
@@ -118,7 +136,6 @@ class Table[Elem, Indexes = _IndexDirectoryProxy[Elem]]:
         
         :param field: The name of the field to index by. This will also be the name of the index.
         :param kind: The type of index to create. Defaults to UniqueIndex. TODO: List available types.
-        :param primary: Marks the index
         :param none_means_empty: If `True`, a `None` value for the field is treated the same as the absence of the field.
             If `False`, `None` is treated as a regular value.
             Defaults to `True`.
@@ -133,13 +150,16 @@ class Table[Elem, Indexes = _IndexDirectoryProxy[Elem]]:
         if not issubclass(kind, Index):
             raise TypeError(f"Index type {kind} must be a subclass of Index")
         
+        if issubclass(kind, PrimaryIndex):
+            raise TypeError(f"For the primary index, use `Table.primary_index_on` instead of `Table.index_on`")
+        
         self._indexes[field] = kind(
-                field,
-                self._getfield,
-                none_means_empty=none_means_empty,
-                required=required,
-                **kwargs,
-            )
+            field,
+            self._getfield,
+            none_means_empty=none_means_empty,
+            required=required,
+            **kwargs,
+        )
         
         return self
     
@@ -269,6 +289,22 @@ class Table[Elem, Indexes = _IndexDirectoryProxy[Elem]]:
     def __len__(self) -> int:
         return len(self._contents)
     
+    @typing.overload
+    def __getitem__(self, keys: slice) -> typing.Iterable[Elem]:
+        """
+        Looks up elements by a range of primary keys.
+        
+        .. Note::
+            Only available with a sorted primary index!
+        
+        :param keys: The range of primary keys to look up.
+        
+        :returns: The sequence of matching elements.
+        
+        :raises PrimaryIndexError: If the table has no primary index.
+        """
+    
+    @typing.overload
     def __getitem__(self, key: typing.Any) -> Elem:
         """
         Looks up an element by its primary key.
@@ -279,7 +315,8 @@ class Table[Elem, Indexes = _IndexDirectoryProxy[Elem]]:
         
         :raises PrimaryIndexError: If the table has no primary index.
         """
-        
+    
+    def __getitem__(self, key: typing.Any | slice):
         if not self.has_primary_index:
             raise PrimaryIndexError("Table has no primary index")
         
