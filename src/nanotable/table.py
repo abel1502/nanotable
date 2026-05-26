@@ -292,7 +292,7 @@ class Table[Elem, Indexes = _IndexDirectoryProxy[Elem]]:
         .. Note::
             If you only want to check the primary key, use `x in table.primary_index`.
             
-            If you only want to check for the object presence, use `x in table.values()`.
+            If you only want to check for the object presence, use `x in table.values()` (linear time, not recommended).
         
         :param item: The element or the primary key to check for.
         
@@ -300,8 +300,13 @@ class Table[Elem, Indexes = _IndexDirectoryProxy[Elem]]:
         """
         
         if self.has_primary_index:
-            return item in self.primary_index or \
-                self._getfield(typing.cast(Elem, item), self.primary_index.on_field) in self.primary_index
+            if item in self.primary_index:
+                return True
+            
+            item = typing.cast(Elem, item)
+            key = self._getfield(item, self.primary_index.on_field)
+            
+            return key in self.primary_index and self.primary_index[key] == item
         
         return item in self._contents
     

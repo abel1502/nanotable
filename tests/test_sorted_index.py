@@ -63,6 +63,9 @@ class TestSortedUniqueIndex:
         assert list(index[2:]) == [{"id": 2}, {"id": 3}, {"id": 4}, {"id": 5}]
         assert list(index[:4]) == [{"id": 1}, {"id": 2}, {"id": 3}]
         assert list(index[:]) == [{"id": 1}, {"id": 2}, {"id": 3}, {"id": 4}, {"id": 5}]
+        
+        with pytest.raises(TypeError):
+            index[::-1]
     
     def test_range_access_bounds(self) -> None:
         index = self.create(required=True)

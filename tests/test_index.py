@@ -102,7 +102,10 @@ class TestUniqueIndex:
         
         with pytest.raises(KeyError):
             index.get(None)
-
+        
+        assert len(index) == 1
+        index.unregister(obj3)
+        assert len(index) == 1
 
     def test_optional_none_valued(self) -> None:
         index = self.create(required=False, none_means_empty=False)
@@ -160,6 +163,29 @@ class TestUniqueIndex:
         with pytest.warns(IndexedFieldChangedWarning):
             # Note: keep this, otherwise a warning may show up at a random future point when `__del__` is called
             index.unregister_all()
+    
+    def test_mapping(self) -> None:
+        index = self.create(required=True)
+        
+        obj1 = {"id": 1, "extra": "foo"}
+        obj2 = {"id": 2, "extra": "baz"}
+        obj3 = {"id": 3, "extra": "baz"}
+        
+        index.register(obj1)
+        index.register(obj2)
+        index.register(obj3)
+        
+        assert set(index.keys()) == {1, 2, 3}
+        assert sorted(list(index.values()), key=lambda x: x["id"]) == [obj1, obj2, obj3]
+        assert sorted(list(index.items())) == [(1, obj1), (2, obj2), (3, obj3)]
+        
+        assert 1 in index
+        assert -1 not in index
+        
+        assert len(index) == 3
+        
+        assert set(index) == set(index.keys())
+        
 
 
 class TestPrimaryIndex:

@@ -97,7 +97,8 @@ tests = ["tests", "*/nanotable/tests"]
 
 [tool.coverage.report]
 exclude_lines = [
-  "no cov",
+  "no cover",
   "if __name__ == .__main__.:",
   "if (typing\\.)?TYPE_CHECKING:",
+  "^\\s*\\.\\.\\.$",
 ]

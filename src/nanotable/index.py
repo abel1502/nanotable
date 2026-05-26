@@ -236,7 +236,7 @@ class Index[
         
         return self._lookup.items()
     
-    def __del__(self) -> None:
+    def __del__(self) -> None:  # pragma: no cover # A destructor like this is impossible to test naturally
         try:
             if disable_safety_checks:
                 return
@@ -424,5 +424,5 @@ try:
         "SortedUniqueIndex",
         # "SortedMultiIndex",
     ]
-except ModuleNotFoundError:
+except ModuleNotFoundError:  # pragma: no cover # We test all possible features combinations, but the coverage report is only published for all features enabled
     pass
