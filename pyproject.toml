@@ -64,6 +64,10 @@ dependency-groups = ["dev"]
 type-check = "mypy --install-types --non-interactive {args:src/nanotable tests}"
 test = "pytest {args}"
 
+[tool.hatch.envs.dev-local]
+template = "dev"
+features = ["sorted"]
+
 [tool.hatch.envs.dev-ci]
 template = "dev"
 
