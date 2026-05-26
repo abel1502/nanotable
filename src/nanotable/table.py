@@ -39,14 +39,15 @@ class Table[Elem, Indexes = _IndexDirectoryProxy[Elem]]:
         getfield: FieldGetter[Elem] | None = None,
     ):
         """
-        TODO
+        Creates an empty table.
         
-        :param of_objects: If `True`, the table stores objects. Defaults to `False`.
-        :param of_dicts: If `True`, the table stores dictionaries. Defaults to `False`.
+        :param of_objects: If `True`, the table stores objects. If `of_dicts` and `getfield` aren't set, this defaults to `True`.
+        :param of_dicts: If `True`, the table stores dictionaries.
         :param getfield: A `FieldGetter` to use for this table. Used to switch between mapping item, object attribute and other definitions of a field.
         """
         
-        # TODO: Default to of_objects, or to trying one then the other?
+        if not of_objects and not of_dicts and getfield is None:
+            of_objects = True
         
         getfield_type_error = TypeError("You must specify either `of_objects`, `of_dicts` or a custom `getfield` function when creating a table")
         
@@ -254,7 +255,16 @@ class Table[Elem, Indexes = _IndexDirectoryProxy[Elem]]:
         for index in self._indexes.values():
             index.unregister_all()
     
-    # TODO: extend
+    def extend(self, items: typing.Iterable[Elem], *, overwrite: bool = False) -> None:
+        """
+        Adds multiple elements to the table.
+        
+        :param items: The elements to add.
+        :param overwrite: If `True`, overwrite the elements that already exist in the table.
+        """
+        
+        for item in items:
+            self.add(item)
     
     # TODO: transaction / backup / something?
     
@@ -262,6 +272,7 @@ class Table[Elem, Indexes = _IndexDirectoryProxy[Elem]]:
     def rekey(self, obj: Elem) -> typing.Generator[None, None, None]:
         """
         A context manager that allows to change values of indexed fields in a safe manner.
+        
         This is a simple wrapper around removing the object from the table and adding it back.
         
         .. Note::
@@ -281,7 +292,35 @@ class Table[Elem, Indexes = _IndexDirectoryProxy[Elem]]:
         yield
         self.add(obj)
     
-    # TODO: rekey_on() which only removes from and re-adds to specific indexes
+    def rekey_on(self, obj: Elem, *fields: str) -> typing.Generator[None, None, None]:
+        """
+        A context manager that allows to change values of indexed fields in a safe manner.
+        
+        This is a slightly more performant but more fragile version of `Table.rekey`.
+        Instead of removing `obj` from the table fully, it only unregisters it
+        from the indexes on specified `fields`. Accordingly, it is only safe to change
+        the indexed fields passed as arguments to `rekey_on` in the `with` block of
+        this function.
+        
+        .. Note::
+            See the documentation for `Table.rekey` for why this is needed.
+        
+        :param obj: The object whose fields you want to change.
+        :param fields: The fields whose values you want to change.
+        
+        :returns: A context manager (to be used in a `with` block).
+        
+        :raises KeyError: If the object is not in the table.
+        """
+        
+        for field in fields:
+            self._indexes[field].unregister(obj)
+        
+        yield
+        
+        for field in fields:
+            self._indexes[field].register(obj)
+        
     
     def __iter__(self) -> typing.Iterator[Elem]:
         return iter(self.items())
