@@ -12,6 +12,10 @@ disable_safety_checks: bool = False
 PACKAGE_ROOT = pathlib.Path(__file__).parent
 
 
+class IndexedFieldChangedWarning(Warning):
+    pass
+
+
 def verify_immutable_key(
     old: typing.Any,
     new: typing.Any,
@@ -24,11 +28,13 @@ def verify_immutable_key(
     warnings.warn(
         f"An indexed field {field_name!r} was changed on {obj!r} from {old!r} to {new!r}! "
         f"The table is now in an inconsistent state. Use `Table.rekey` for changing indexed fields safely.",
+        IndexedFieldChangedWarning,
         skip_file_prefixes=(str(PACKAGE_ROOT),),
     )
 
 
 __all__ = [
     "disable_safety_checks",
+    "IndexedFieldChangedWarning",
     "verify_immutable_key",
 ]
