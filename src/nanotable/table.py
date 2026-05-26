@@ -50,9 +50,6 @@ class Table[Elem, Indexes = _IndexDirectoryProxy[Elem]]:
     _getfield: FieldGetter[Elem]
     _indexes: dict[str, Index[Elem]]
     
-    # TODO: Dedicated primary index, which could let us get rid of a contents list.
-    # TODO: Construct from initial elements? Maybe not, if we want to build the "schema" first...
-    # TODO: Maybe replace `getfield` with `store_mappings` and `store_objects`? If both, pick depending on `isinstance(..., typing.Mapping)`
     def __init__(
         self,
         *,
@@ -253,6 +250,10 @@ class Table[Elem, Indexes = _IndexDirectoryProxy[Elem]]:
         
         for index in self._indexes.values():
             index.unregister_all()
+    
+    # TODO: extend
+    
+    # TODO: transaction / backup / something?
     
     @contextmanager
     def rekey(self, obj: Elem) -> typing.Generator[None, None, None]:
