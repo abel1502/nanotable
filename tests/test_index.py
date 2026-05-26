@@ -7,6 +7,7 @@ import nanotable.index
 from nanotable.index import UniqueIndex, PrimaryIndex
 from nanotable.field import dict_getter
 from nanotable.errors import ValidationError
+from nanotable.safety import IndexedFieldChangedWarning
 
 
 def test_public() -> None:
@@ -138,6 +139,27 @@ class TestUniqueIndex:
         
         with pytest.raises(TypeError):
             index.get(1, None, None)  # type: ignore
+    
+    def test_safety_checks(self) -> None:
+        index = self.create(required=True)
+        
+        obj = {"id": 1, "foo": "bar"}
+        index.register(obj)
+        
+        obj["id"] = 2
+        
+        with pytest.warns(IndexedFieldChangedWarning):
+            index.get(1)
+        
+        with pytest.warns(IndexedFieldChangedWarning):
+            index[1]
+        
+        with pytest.raises(KeyError):
+            index[2]
+        
+        with pytest.warns(IndexedFieldChangedWarning):
+            # Note: keep this, otherwise a warning may show up at a random future point when `__del__` is called
+            index.unregister_all()
 
 
 class TestPrimaryIndex:

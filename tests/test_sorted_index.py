@@ -48,4 +48,100 @@ class TestSortedUniqueIndex:
 
         with pytest.raises(TypeError):
             index.register({"id": "not comparable with ints"})
+    
+    def test_slice_range_access(self) -> None:
+        index = self.create(required=True)
+        
+        for i in range(1, 6):
+            index.register({"id": i})
+        
+        assert index[1] == {"id": 1}
+        assert index[3] == {"id": 3}
+        assert index[5] == {"id": 5}
+        
+        assert list(index[2:4]) == [{"id": 2}, {"id": 3}]
+        assert list(index[2:]) == [{"id": 2}, {"id": 3}, {"id": 4}, {"id": 5}]
+        assert list(index[:4]) == [{"id": 1}, {"id": 2}, {"id": 3}]
+        assert list(index[:]) == [{"id": 1}, {"id": 2}, {"id": 3}, {"id": 4}, {"id": 5}]
+    
+    def test_range_access_bounds(self) -> None:
+        index = self.create(required=True)
+        
+        for i in range(1, 6):
+            index.register({"id": i})
+        
+        assert list(index.get_range(
+            low=2,
+            high=4,
+            low_inclusive=True,
+            high_inclusive=True,
+        )) == [{"id": 2}, {"id": 3}, {"id": 4}]
+        
+        assert list(index.get_range(
+            low=2,
+            high=4,
+            low_inclusive=False,
+            high_inclusive=True,
+        )) == [{"id": 3}, {"id": 4}]
+        
+        assert list(index.get_range(
+            low=2,
+            high=4,
+            low_inclusive=True,
+            high_inclusive=False,
+        )) == [{"id": 2}, {"id": 3}]
+        
+        assert list(index.get_range(
+            low=2,
+            high=4,
+            low_inclusive=False,
+            high_inclusive=False,
+        )) == [{"id": 3}]
+        
+        assert list(index.get_range(
+            low=2,
+            high=2,
+        )) == [{"id": 2}]
+        
+        assert list(index.get_range(
+            low=2,
+            high=2,
+            high_inclusive=False
+        )) == []
+        
+        assert list(index.get_range(
+            low=2,
+            high=2,
+            low_inclusive=False
+        )) == []
+    
+    def test_range_access_reverse(self) -> None:
+        index = self.create(required=True)
+        
+        for i in range(1, 6):
+            index.register({"id": i})
+        
+        assert list(index.get_range(
+            low=2,
+            high=4,
+            low_inclusive=True,
+            high_inclusive=True,
+            reverse=True,
+        )) == [{"id": 4}, {"id": 3}, {"id": 2}]
+        
+        assert list(index.get_range(
+            low=2,
+            high=4,
+            low_inclusive=True,
+            high_inclusive=False,
+            reverse=True,
+        )) == [{"id": 3}, {"id": 2}]
+        
+        assert list(index.get_range(
+            low=2,
+            high=4,
+            low_inclusive=False,
+            high_inclusive=True,
+            reverse=True,
+        )) == [{"id": 4}, {"id": 3}]
 

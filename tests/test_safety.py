@@ -15,6 +15,10 @@ def test_exports() -> None:
     assert "verify_immutable_key" in exports
 
 
+def test_on_by_default() -> None:
+    assert not nanotable.safety.disable_safety_checks
+
+
 def test_catches_change() -> None:
     with pytest.warns(IndexedFieldChangedWarning, match=r"An indexed field [\'\"]foo[\'\"] was changed"):
         verify_immutable_key(1, 2, object(), "foo")
