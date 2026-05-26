@@ -193,7 +193,7 @@ class Index[
                 result = self._lookup.get(key, args[0])
             
         elif not disable_safety_checks:
-            for obj in self._flatten_results([result]):
+            for obj in self.result_items(result):
                 verify_immutable_key(key, self.getfield(obj, self.on_field), obj, self.on_field)
         
         return result
@@ -292,9 +292,9 @@ class Index[
             pass
     
     @abstractmethod
-    def _flatten_results(self, results: typing.Iterable[Result]) -> typing.Iterable[Obj]:
+    def result_items(self, result: Result) -> typing.Iterable[Obj]:
         """
-        Unpacks a sequence of results into a sequence of individual objects.
+        Unpacks a results into a sequence of individual objects.
         """
 
 
@@ -318,8 +318,8 @@ class UniqueIndex[Obj, Key = typing.Any](Index[Obj, Obj, Key]):
         self._lookup.pop(key, None)
     
     @typing.override
-    def _flatten_results(self, results: typing.Iterable[Obj]) -> typing.Iterable[Obj]:
-        return results
+    def result_items(self, result: Obj) -> typing.Iterable[Obj]:
+        return [result]
 
 
 class PrimaryIndex[Obj, Key = typing.Any](UniqueIndex[Obj, Key]):
@@ -372,8 +372,8 @@ class MultiIndex[Obj, Key = typing.Any](Index[Obj, list[Obj], Key]):
             self._lookup.pop(key, None)
     
     @typing.override
-    def _flatten_results(self, results: typing.Iterable[list[Obj]]) -> typing.Iterable[Obj]:
-        return itertools.chain.from_iterable(results)
+    def result_items(self, result: list[Obj]) -> typing.Iterable[Obj]:
+        return result
     
     @typing.override
     def _get_default(self, key: Key) -> list[Obj]:
@@ -429,7 +429,7 @@ try:
             :returns: An iterator over the elements whose keys fall in the range `[low:high]`.
             """
             
-            return self._flatten_results(map(lambda key: self[key], self._lookup.irange(
+            return itertools.chain.from_iterable(map(lambda key: self.result_items(self[key]), self._lookup.irange(
                 low,
                 high,
                 inclusive=(low_inclusive, high_inclusive),

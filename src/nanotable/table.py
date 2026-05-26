@@ -218,8 +218,9 @@ class Table[Elem, Indexes = _IndexDirectoryProxy[Elem]]:
                     key = self._getfield(elem, index.on_field)
                     if key in index:
                         old = index[key]
-                        self.remove(old)
-                        tx.add_undo(partial(self.add, old))
+                        for other_elem in index.result_items(old):
+                            self.remove(other_elem)
+                            tx.add_undo(partial(self.add, other_elem))
                 
                 index.register(elem)
                 tx.add_undo(partial(index.unregister, elem))

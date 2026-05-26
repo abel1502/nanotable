@@ -9,7 +9,7 @@ import nanotable.index
 from nanotable.index import SortedUniqueIndex, SortedPrimaryIndex, SortedMultiIndex
 from nanotable.field import getfield_item
 
-def test_public() -> None:
+def test_exports() -> None:
     exported = nanotable.index.__all__
     
     assert "SortedUniqueIndex" in exported

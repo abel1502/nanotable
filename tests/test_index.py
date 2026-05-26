@@ -10,7 +10,7 @@ from nanotable.errors import ValidationError
 from nanotable.safety import IndexedFieldChangedWarning
 
 
-def test_public() -> None:
+def test_exports() -> None:
     exported = nanotable.index.__all__
     
     assert "Index" in exported
