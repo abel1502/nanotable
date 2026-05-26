@@ -310,20 +310,17 @@ try:
         from sortedcontainers import SortedKeysView, SortedValuesView, SortedItemsView  # type: ignore[import-not-found]
     
     
-    class SortedUniqueIndex[Obj, Key = typing.Any](UniqueIndex[Obj, Key]):
-        """
-        A variant of unique index that also maintains the sorted order of
-        the keys, enabling efficient range queries.
-        
-        TODO: List methods
-        """
-        
-        _lookup: SortedDict[Key, Obj]
+    class _SortedIndexMixin[Obj, Result = typing.Any, Key = typing.Any](Index[Obj, Result, Key]):
+        _lookup: SortedDict[Key, Result]
         
         @classmethod
         @typing.override
-        def _init_lookup(cls) -> SortedDict[Key, Obj]:
+        def _init_lookup(cls) -> SortedDict[Key, Result]:
             return SortedDict()
+        
+        @abstractmethod
+        def _flatten_results(self, results: typing.Iterable[Result]) -> typing.Iterable[Obj]:
+            ...
         
         def get_range(
             self,
@@ -351,15 +348,15 @@ try:
             :returns: An iterator over the elements whose keys fall in the range `[low:high]`.
             """
             
-            return map(lambda key: self[key], self._lookup.irange(
+            return self._flatten_results(map(lambda key: self[key], self._lookup.irange(
                 low,
                 high,
                 inclusive=(low_inclusive, high_inclusive),
                 reverse=reverse,
-            ))
+            )))
 
         @typing.overload
-        def __getitem__(self, key: Key) -> Obj:
+        def __getitem__(self, key: Key) -> Result:
             ...
         
         @typing.overload
@@ -404,7 +401,7 @@ try:
             return self._lookup.keys()
         
         @typing.override
-        def values(self) -> SortedValuesView[Obj]:
+        def values(self) -> SortedValuesView[Result]:
             """
             Returns the ovjects registered in the index, in sorted order of their keys.
             """
@@ -412,7 +409,7 @@ try:
             return self._lookup.values()
         
         @typing.override
-        def items(self) -> SortedItemsView[Key, Obj]:
+        def items(self) -> SortedItemsView[Key, Result]:
             """
             Returns the key-object pairs for the objects registered in the index, in sorted order of their keys.
             """
@@ -420,9 +417,32 @@ try:
             return self._lookup.items()
     
     
+    class SortedUniqueIndex[Obj, Key = typing.Any](_SortedIndexMixin[Obj, Obj, Key], UniqueIndex[Obj, Key]):
+        """
+        A variant of unique index that also maintains the sorted order of
+        the keys, enabling efficient range queries.
+        
+        TODO: List methods
+        """
+        
+        @typing.override
+        def _flatten_results(self, results: typing.Iterable[Obj]) -> typing.Iterable[Obj]:
+            return results
+    
+    
+    class SortedPrimaryIndex[Obj, Key = typing.Any](PrimaryIndex[Obj, Key], SortedUniqueIndex[Obj, Key]):
+        """
+        A variant of primary index that also maintains the sorted order of
+        the keys, enabling efficient range queries.
+        
+        TODO: List methods
+        """
+    
+    
     __all__ += [
         "SortedUniqueIndex",
+        "SortedPrimaryIndex",
         # "SortedMultiIndex",
     ]
-except ModuleNotFoundError:  # pragma: no cover # We test all possible features combinations, but the coverage report is only published for all features enabled
+except ModuleNotFoundError:
     pass

@@ -101,4 +101,5 @@ exclude_lines = [
   "if __name__ == .__main__.:",
   "if (typing\\.)?TYPE_CHECKING:",
   "^\\s*\\.\\.\\.$",
+  "except ModuleNotFoundError:",  # We test all possible feature combinations, but the coverage report includes only the run with everything enabled
 ]
