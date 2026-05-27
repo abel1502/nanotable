@@ -19,6 +19,47 @@ class Table[Elem, Indexes = _IndexDirectoryProxy[Elem]]:
     provide efficient access to it both in terms of memory and time.
     
     TODO: List methods
+    
+    ## TEMPORARY brainstorming: (TODO: Remove)
+    
+    - A table is a collection of elements.
+    - Duplicates are not expressly forbidden.
+    - Elements have fields in some sense.
+    - A table can have indexes for lookup based on these fields.
+    - Indexes are notified of changes to the table.
+    - Indexes maintain internal state and provide lookups faster than a linear scan.
+    - Indexes may impose constraints on the indexed fields (hashable, unique, comparable, etc.).
+    - Tables and indexes must be as performant as an improvised data structure
+      built of `dict`s, `list`s and other standard containers for the specific task,
+      except possibly a small overhead term corresponding to the added abstraction
+      layers where inevitable.
+    
+    - Does a table allow duplicates? Yes.
+    - Is a table ordered?
+      - In general, I don't think I need to preserve insertion order. Maybe for consistency with `dict`?
+      - If multiple values returned from an index (`.get_many()` for a collection of keys?,
+        `.get` on multi-indexes, `.get_range()` on sorted indexes, ...) are to be wrapped in a table,
+        order would be significant. The upside to returning a table would be inclusion of stuff like
+        `filter` (or `where` or `select` or `query`, idk). But table's stateful functionality, like
+        indexes, would be useless there. Perhaps a separate storage abstraction?
+    
+    - Let's say a separate storage abstraction, okay. What are the alternatives?
+      - `list`. Arbitrary order. Allows duplicates. Slow.
+      - `SortedList`. Order of increasing elements (or of some property of them). Allows duplicates. Fast.
+      - `set`. No order. No duplicates. Fast. Requires hashability.
+      - `SortedSet`. Order of increasing elements (or of some property of them). No duplicates. Fast. Requires comparability.
+      - `UniqueIndex(required=True)` (primary key index). No order (can be tightened to insertion order if need be).
+        No duplicates or primary key collisions. Fast. Requires a hashable primary key.
+      - `SortedUniqueIndex(required=True)` (sorted primary key index). Order of increasing primary keys.
+        No duplicates or primary key collisions. Fast. Requires a comparable primary key.
+      - More alternatives?
+    - Can I think of an interface for a wrapper around any of these, allowing to take advantage of the strengths of all of these? "Group".
+      - Do I want a storage to be convenient when used standalone? Probably yes.
+      - Maybe the mutable interface is (documented as) package-private? As in, for a user this is supposed to be a powerful view.
+      - In general, a sequence of items. Sometimes also a mapping which is partially contradictory.
+        - Maybe drop the index-backed variants?
+        - Or reimplement them with an external index (one they don't own and only query)?
+          That deprives the group of convenient primary-index access.
     """
     
     __slots__ = (
