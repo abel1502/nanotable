@@ -113,7 +113,7 @@ class Table[Elem, Indexes = _IndexDirectoryProxy[Elem]]:
         if sorted:
             try:
                 from nanotable.index import SortedUniqueIndex
-            except NameError:
+            except ImportError:
                 raise FeatureError("sorted")
             
             kind = SortedUniqueIndex
@@ -121,7 +121,12 @@ class Table[Elem, Indexes = _IndexDirectoryProxy[Elem]]:
         if getfield is None:
             getfield = self._getfield_factory(name)
         
-        index: UniqueIndex[Elem] = kind(name, getfield, none_means_empty=none_means_empty, required=True)
+        index: UniqueIndex[Elem] = kind(
+            name,
+            getfield,
+            none_means_empty=none_means_empty,
+            required=True,
+        )
         
         for item in self._contents:
             index.register(item)
