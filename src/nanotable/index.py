@@ -92,7 +92,7 @@ class Index[
         
         if key is MISSING:
             if self.required:
-                raise ValueError(f"Element {elem!r} has no field for the required index on {self.name!r}")
+                self._no_required_field(elem)
             return
         
         key = typing.cast(Key, key)
@@ -128,7 +128,7 @@ class Index[
         
         if key is MISSING:
             if self.required:
-                raise ValueError(f"Element {elem!r} has no field for the required index on {self.name!r}")
+                self._no_required_field(elem)
             return
         
         key = typing.cast(Key, key)
@@ -158,6 +158,14 @@ class Index[
                     verify_immutable_key(key, self.getfield(obj), obj, self.name)
         
         self._lookup.clear()
+    
+    def _no_required_field(self, elem: Obj) -> None:
+        raise ValueError(
+            f"Element {elem!r} has no field for the required index on {self.name!r}. "
+            f"If this seems like a mistake, ensure you create the table with the appropriate "
+            f"value for `of_objects` / `of_dicts` / `getfield_factory`, or the index with the "
+            f"appropriate `getfield`."
+        )
     
     @typing.overload
     def get(self, key: Key, /) -> Result:
