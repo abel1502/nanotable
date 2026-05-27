@@ -3,7 +3,7 @@ import typing
 from contextlib import contextmanager
 from functools import partial
 
-from nanotable.index import Index, PrimaryIndex, UniqueIndex
+from nanotable.index import Index, UniqueIndex
 from nanotable.transaction import Transaction
 from nanotable.field import FieldGetter, getfield_attr, getfield_item, MISSING
 from nanotable.errors import PrimaryIndexError, FeatureError
@@ -28,7 +28,7 @@ class Table[Elem, Indexes = _IndexDirectoryProxy[Elem]]:
     )
     
     # TODO: instead of list[Elem], use Group[Elem]?
-    _contents: list[Elem] | PrimaryIndex[Elem]
+    _contents: list[Elem] | UniqueIndex[Elem]
     _getfield: FieldGetter[Elem]
     _indexes: dict[str, Index[Elem]]
     
@@ -103,17 +103,17 @@ class Table[Elem, Indexes = _IndexDirectoryProxy[Elem]]:
                 f"Cannot create new primary index on {field!r} because another index already exists on that field",
             )
         
-        kind: type[PrimaryIndex[Elem]] = PrimaryIndex
+        kind: type[UniqueIndex[Elem]] = UniqueIndex
         
         if sorted:
             try:
-                from nanotable.index import SortedPrimaryIndex
+                from nanotable.index import SortedUniqueIndex
             except NameError:
                 raise FeatureError("sorted")
             
-            kind = SortedPrimaryIndex
+            kind = SortedUniqueIndex
         
-        index: PrimaryIndex[Elem] = kind(field, self._getfield, none_means_empty=none_means_empty)
+        index: UniqueIndex[Elem] = kind(field, self._getfield, none_means_empty=none_means_empty, required=True)
         
         for item in self._contents:
             index.register(item)
@@ -152,9 +152,6 @@ class Table[Elem, Indexes = _IndexDirectoryProxy[Elem]]:
         if not issubclass(kind, Index):
             raise TypeError(f"Index type {kind} must be a subclass of Index")
         
-        if issubclass(kind, PrimaryIndex):
-            raise TypeError(f"For the primary index, use `Table.primary_index_on` instead of `Table.index_on`")
-        
         self._indexes[field] = kind(
             field,
             self._getfield,
@@ -171,10 +168,10 @@ class Table[Elem, Indexes = _IndexDirectoryProxy[Elem]]:
         Whether this table has a primary index.
         """
         
-        return isinstance(self._contents, PrimaryIndex)
+        return isinstance(self._contents, UniqueIndex)
     
     @property
-    def primary_index(self) -> PrimaryIndex[Elem]:
+    def primary_index(self) -> UniqueIndex[Elem]:
         """
         The primary index of the table, if any.
         
@@ -184,7 +181,7 @@ class Table[Elem, Indexes = _IndexDirectoryProxy[Elem]]:
         if not self.has_primary_index:
             raise PrimaryIndexError("Table has no primary index")
         
-        return typing.cast(PrimaryIndex[Elem], self._contents)
+        return typing.cast(UniqueIndex[Elem], self._contents)
     
     @property
     def by(self) -> Indexes:

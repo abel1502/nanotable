@@ -90,9 +90,9 @@ table.index_on("phone")
 
 ### Indexes
 
-TODO: UniqueIndex, PrimaryIndex, MultiIndex
+TODO: UniqueIndex, MultiIndex
 
-TODO: `[sorted]` extra and SortedUniqueIndex, SortedPrimaryIndex, SortedMultiIndex
+TODO: `[sorted]` extra and SortedUniqueIndex, SortedMultiIndex
 
 ### Caveats
 

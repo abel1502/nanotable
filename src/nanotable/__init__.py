@@ -1,5 +1,5 @@
 from .table import Table
-from .index import Index, UniqueIndex, PrimaryIndex
+from .index import Index, UniqueIndex, MultiIndex
 from .field import FieldGetter, getfield_attr, getfield_item, MISSING, typeof_MISSING
 from .errors import ValidationError, PrimaryIndexError
 from .__about__ import __version__
@@ -8,7 +8,7 @@ __all__ = [
     "Table",
     "Index",
     "UniqueIndex",
-    "PrimaryIndex",
+    "MultiIndex",
     "FieldGetter",
     "getfield_attr",
     "getfield_item",
@@ -20,10 +20,10 @@ __all__ = [
 ]
 
 try:
-    from .index import SortedUniqueIndex, SortedPrimaryIndex
+    from .index import SortedUniqueIndex, SortedMultiIndex
     __all__ += [
         "SortedUniqueIndex",
-        "SortedPrimaryIndex",
+        "SortedMultiIndex",
     ]
 except ModuleNotFoundError:
     pass

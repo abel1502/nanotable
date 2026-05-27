@@ -322,29 +322,6 @@ class UniqueIndex[Obj, Key = typing.Any](Index[Obj, Obj, Key]):
         return [result]
 
 
-class PrimaryIndex[Obj, Key = typing.Any](UniqueIndex[Obj, Key]):
-    """
-    A primary index is a special kind of unique index that
-    also acts as the primary storage for the table's entries.
-    
-    TODO: List methods
-    """
-    
-    def __init__(
-        self,
-        on_field: str,
-        getfield: FieldGetter,
-        *,
-        none_means_empty: bool = True,
-    ):
-        super().__init__(
-            on_field,
-            getfield,
-            none_means_empty=none_means_empty,
-            required=True,
-        )
-
-
 # TODO: instead of list[Obj], use Group[Obj]
 class MultiIndex[Obj, Key = typing.Any](Index[Obj, list[Obj], Key]):
     """
@@ -383,7 +360,6 @@ class MultiIndex[Obj, Key = typing.Any](Index[Obj, list[Obj], Key]):
 __all__ = [
     "Index",
     "UniqueIndex",
-    "PrimaryIndex",
     "MultiIndex",
 ]
 
@@ -485,15 +461,6 @@ try:
         """
     
     
-    class SortedPrimaryIndex[Obj, Key = typing.Any](PrimaryIndex[Obj, Key], SortedUniqueIndex[Obj, Key]):
-        """
-        A variant of PrimaryIndex that also maintains the sorted order of
-        the keys, enabling efficient range queries.
-        
-        TODO: List methods
-        """
-    
-    
     class SortedMultiIndex[Obj, Key = typing.Any](_SortedIndexMixin[Obj, list[Obj], Key], MultiIndex[Obj, Key]):
         """
         A variant of MultiIndex that also maintains the sorted order of
@@ -509,7 +476,6 @@ try:
     
     __all__ += [
         "SortedUniqueIndex",
-        "SortedPrimaryIndex",
         "SortedMultiIndex",
     ]
 except ModuleNotFoundError:
