@@ -11,21 +11,31 @@ MISSING = Sentinel("MISSING")
 type typeof_MISSING = Sentinel
 
 
-type FieldGetter[Obj] = typing.Callable[[Obj, str], typing.Any | typeof_MISSING]
+type FieldGetter[Obj] = typing.Callable[[Obj], typing.Any | typeof_MISSING]
 
 
-def getfield_attr(obj: object, key: str) -> typing.Any | typeof_MISSING:
-    return getattr(obj, key, MISSING)
+type FieldGetterFactory[Obj] = typing.Callable[[str], FieldGetter[Obj]]
 
 
-def getfield_item(obj: dict[str, typing.Any], key: str) -> typing.Any | typeof_MISSING:
-    return obj.get(key, MISSING)
+def getfield_attr(key: str) -> FieldGetter[object]:
+    def getter(obj: object) -> typing.Any | typeof_MISSING:
+        return getattr(obj, key, MISSING)
+    
+    return getter
+
+
+def getfield_item(key: str) -> FieldGetter[typing.Mapping[str, typing.Any]]:
+    def getter(obj: typing.Mapping[str, typing.Any]) -> typing.Any | typeof_MISSING:
+        return obj.get(key, MISSING)
+    
+    return getter
 
 
 __all__ = [
     "MISSING",
     "typeof_MISSING",
     "FieldGetter",
+    "FieldGetterFactory",
     "getfield_attr",
     "getfield_item",
 ]

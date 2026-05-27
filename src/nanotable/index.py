@@ -28,40 +28,41 @@ class Index[
     
     __slots__ = (
         "_lookup",
-        "on_field",
+        "name",
         "getfield",
         "none_means_empty",
         "required",
     )
     
     _lookup: typing.MutableMapping[Key, Result]
-    on_field: str
-    getfield: FieldGetter
+    name: str
+    getfield: FieldGetter[Obj]
     none_means_empty: bool
     required: bool
     
     def __init__(
         self,
-        on_field: str,
-        getfield: FieldGetter,
+        name: str,
+        getfield: FieldGetter[Obj],
         *,
         none_means_empty: bool = True,
         required: bool = False,
     ):
         """
-        :param on_field: The name of the field to index by.
-        :param getfield: A `FieldGetter` to use for this index. Used to switch
+        :param name: The name of the index. Used for error messages.
+        :param getfield: A `FieldGetter` to use for this index. For any object,
+            it should return the indexed field's value or `MISSING`. Used to switch
             between mapping item, object attribute and other definitions of a field.
         :param none_means_empty: If `False`, `None` is treated as a regular value.
-            If `True`, `None` is treated the same as the lack of the `on_field` attribute.
+            If `True`, `None` is treated the same as the lack of the indexed field.
             Defaults to `True`.
-        :param required: If `True`, all objects must have a value for `on_field`.
-            If `False`, objects without a value for `on_field` are ignored.
+        :param required: If `True`, all objects must have a value for the indexed field.
+            If `False`, objects without a value for the indexed field are ignored.
             Defaults to `False`.
         """
         
         self._lookup = self._init_lookup()
-        self.on_field = on_field
+        self.name = name
         self.getfield = getfield
         self.none_means_empty = none_means_empty
         self.required = required
@@ -84,14 +85,14 @@ class Index[
         :raises ValidationError: If registering the element would violate some of the index invariants.
         """
         
-        key = self.getfield(elem, self.on_field)
+        key = self.getfield(elem)
         
         if key is None and self.none_means_empty:
             key = MISSING
         
         if key is MISSING:
             if self.required:
-                raise ValueError(f"Element {elem!r} has no {self.on_field!r} field which is required")
+                raise ValueError(f"Element {elem!r} has no field for the required index on {self.name!r}")
             return
         
         key = typing.cast(Key, key)
@@ -120,14 +121,14 @@ class Index[
         :raises KeyError: If `missing_ok` is `False` and the element does not exist in the index.
         """
         
-        key = self.getfield(elem, self.on_field)
+        key = self.getfield(elem)
         
         if key is None and self.none_means_empty:
             key = MISSING
         
         if key is MISSING:
             if self.required:
-                raise ValueError(f"Element {elem!r} has no {self.on_field!r} field which is required")
+                raise ValueError(f"Element {elem!r} has no field for the required index on {self.name!r}")
             return
         
         key = typing.cast(Key, key)
@@ -135,7 +136,7 @@ class Index[
         if key in self._lookup:
             self._unregister(key, elem)
         elif not missing_ok:
-            raise KeyError(f"Key {key!r} not found in index by {self.on_field!r}")
+            raise KeyError(f"Key {key!r} not found in index on {self.name!r}")
     
     @abstractmethod
     def _unregister(self, key: Key, elem: Obj) -> None:
@@ -152,8 +153,9 @@ class Index[
         """
         
         if not disable_safety_checks:
-            for key, obj in self.items():
-                verify_immutable_key(key, self.getfield(obj, self.on_field), obj, self.on_field)
+            for key, result in self.items():
+                for obj in self.result_items(result):
+                    verify_immutable_key(key, self.getfield(obj), obj, self.name)
         
         self._lookup.clear()
     
@@ -194,7 +196,7 @@ class Index[
             
         elif not disable_safety_checks:
             for obj in self.result_items(result):
-                verify_immutable_key(key, self.getfield(obj, self.on_field), obj, self.on_field)
+                verify_immutable_key(key, self.getfield(obj), obj, self.name)
         
         return result
     
@@ -211,7 +213,7 @@ class Index[
         :raises KeyError: If the index decides to treat the absence of the key as an error.
         """
         
-        raise KeyError(f"Key {key!r} not found in index on {self.on_field!r}")
+        raise KeyError(f"Key {key!r} not found in index on {self.name!r}")
     
     def _get_slice(self, keys: slice[Key | None, Key | None, None]) -> typing.Iterable[Obj]:
         """
@@ -283,8 +285,9 @@ class Index[
             if disable_safety_checks:
                 return
             
-            for key, obj in self.items():
-                verify_immutable_key(key, self.getfield(obj, self.on_field), obj, self.on_field)
+            for key, result in self.items():
+                for obj in self.result_items(result):
+                    verify_immutable_key(key, self.getfield(obj), obj, self.name)
         except:
             # Nothing is guaranteed for a destructor, so we can't guarantee anything either
             # In particular, I encountered situations where the index had no `_lookup` attribute
@@ -309,7 +312,7 @@ class UniqueIndex[Obj, Key = typing.Any](Index[Obj, Obj, Key]):
     def _register(self, key: Key, elem: Obj) -> None:
         if key in self._lookup:
             old_elem = self._lookup[key]
-            raise ValidationError(f"Duplicate value {key!r} for unique-indexed field {self.on_field!r} (existing object: {old_elem!r}, new object: {elem!r})")
+            raise ValidationError(f"Duplicate value {key!r} for the unique index on {self.name!r} (existing object: {old_elem!r}, new object: {elem!r})")
         
         self._lookup[key] = elem
     

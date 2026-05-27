@@ -20,7 +20,7 @@ def test_exports() -> None:
 
 class TestUniqueIndex:
     def create(self, **kwargs) -> UniqueIndex[dict[str, typing.Any]]:
-        return UniqueIndex("id", getfield_item, **kwargs)
+        return UniqueIndex("id", getfield_item("id"), **kwargs)
     
     def test_normal(self) -> None:
         index = self.create(required=True)
@@ -190,11 +190,26 @@ class TestUniqueIndex:
         
         with pytest.raises(TypeError):
             index[:]
+    
+    def test_name_is_diagnostic_only(self) -> None:
+        index = UniqueIndex[dict[str, typing.Any]]("other", getfield_item("id"), required=True)
+        
+        obj1 = {"id": 1, "other": "foo"}
+        obj2 = {"id": 2, "other": "bar"}
+        obj3 = {"id": 3, "other": "baz"}
+        
+        index.register(obj1)
+        index.register(obj2)
+        index.register(obj3)
+        
+        assert index.get(1) == obj1
+        assert index.get(2) == obj2
+        assert index.get(3) == obj3
 
 
 class TestMultiIndex:
     def create(self, **kwargs) -> MultiIndex[dict[str, typing.Any]]:
-        return MultiIndex("id", getfield_item, **kwargs)
+        return MultiIndex("id", getfield_item("id"), **kwargs)
     
     def test_normal(self) -> None:
         index = self.create(required=True)
@@ -250,4 +265,19 @@ class TestMultiIndex:
         index.unregister(index.get(1)[0])
         
         assert index.get(1) == []
+    
+    def test_name_is_diagnostic_only(self) -> None:
+        index = MultiIndex[dict[str, typing.Any]]("other", getfield_item("id"), required=True)
+        
+        obj1 = {"id": 1, "other": "foo"}
+        obj2 = {"id": 2, "other": "bar"}
+        obj3 = {"id": 3, "other": "baz"}
+        
+        index.register(obj1)
+        index.register(obj2)
+        index.register(obj3)
+        
+        assert index.get(1) == [obj1]
+        assert index.get(2) == [obj2]
+        assert index.get(3) == [obj3]
 

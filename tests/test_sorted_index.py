@@ -18,7 +18,7 @@ def test_exports() -> None:
 
 class TestSortedUniqueIndex:
     def create(self, **kwargs) -> SortedUniqueIndex[dict[str, typing.Any]]:
-        return SortedUniqueIndex("id", getfield_item, **kwargs)
+        return SortedUniqueIndex("id", getfield_item("id"), **kwargs)
     
     def test_inherits_unique(self) -> None:
         index = self.create(required=True)
@@ -151,7 +151,7 @@ class TestSortedUniqueIndex:
 
 class TestSortedMultiIndex:
     def create(self, **kwargs) -> SortedMultiIndex[dict[str, typing.Any]]:
-        return SortedMultiIndex("id", getfield_item, **kwargs)
+        return SortedMultiIndex("id", getfield_item("id"), **kwargs)
     
     def test_inherits_multi(self) -> None:
         index = self.create()

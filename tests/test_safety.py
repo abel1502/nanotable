@@ -20,7 +20,7 @@ def test_on_by_default() -> None:
 
 
 def test_catches_change() -> None:
-    with pytest.warns(IndexedFieldChangedWarning, match=r"An indexed field [\'\"]foo[\'\"] was changed"):
+    with pytest.warns(IndexedFieldChangedWarning, match=r"Use `Table\.rekey`"):
         verify_immutable_key(1, 2, object(), "foo")
 
 

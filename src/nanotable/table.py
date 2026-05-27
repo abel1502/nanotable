@@ -5,7 +5,7 @@ from functools import partial
 
 from nanotable.index import Index, UniqueIndex
 from nanotable.transaction import Transaction
-from nanotable.field import FieldGetter, getfield_attr, getfield_item, MISSING
+from nanotable.field import FieldGetterFactory, FieldGetter, getfield_attr, getfield_item, MISSING
 from nanotable.errors import PrimaryIndexError, FeatureError
 
 
@@ -23,13 +23,13 @@ class Table[Elem, Indexes = _IndexDirectoryProxy[Elem]]:
     
     __slots__ = (
         "_contents",
-        "_getfield",
+        "_getfield_factory",
         "_indexes",
     )
     
     # TODO: instead of list[Elem], use Group[Elem]?
     _contents: list[Elem] | UniqueIndex[Elem]
-    _getfield: FieldGetter[Elem]
+    _getfield_factory: FieldGetterFactory[Elem]
     _indexes: dict[str, Index[Elem]]
     
     def __init__(
@@ -37,7 +37,7 @@ class Table[Elem, Indexes = _IndexDirectoryProxy[Elem]]:
         *,
         of_objects: bool = False,
         of_dicts: bool = False,
-        getfield: FieldGetter[Elem] | None = None,
+        getfield_factory: FieldGetterFactory[Elem] | None = None,
     ):
         """
         Creates an empty table.
@@ -47,29 +47,30 @@ class Table[Elem, Indexes = _IndexDirectoryProxy[Elem]]:
         :param getfield: A `FieldGetter` to use for this table. Used to switch between mapping item, object attribute and other definitions of a field.
         """
         
-        if not of_objects and not of_dicts and getfield is None:
+        if not of_objects and not of_dicts and getfield_factory is None:
             of_objects = True
         
-        getfield_type_error = TypeError("You must specify either `of_objects`, `of_dicts` or a custom `getfield` function when creating a table")
+        getfield_type_error = TypeError("You must specify either `of_objects`, `of_dicts` or a custom `getfield_factory` function when creating a table")
         
         if of_objects:
-            if of_dicts or getfield is not None:
+            if of_dicts or getfield_factory is not None:
                 raise getfield_type_error
-            getfield = typing.cast(FieldGetter[Elem], getfield_attr)
+            getfield_factory = typing.cast(FieldGetterFactory[Elem], getfield_attr)
         elif of_dicts:
-            if of_objects or getfield is not None:
+            if of_objects or getfield_factory is not None:
                 raise getfield_type_error
-            getfield = typing.cast(FieldGetter[Elem], getfield_item)
-        elif getfield is None:
+            getfield_factory = typing.cast(FieldGetterFactory[Elem], getfield_item)
+        elif getfield_factory is None:
             raise getfield_type_error
         
         self._contents = []
-        self._getfield = getfield
+        self._getfield_factory = getfield_factory
         self._indexes = {}
     
     def primary_index_on(
         self,
-        field: str,
+        name: str,
+        getfield: FieldGetter[Elem] | None = None,
         *,
         none_means_empty: bool = True,
         sorted: bool = False,
@@ -83,9 +84,11 @@ class Table[Elem, Indexes = _IndexDirectoryProxy[Elem]]:
             Without one, the table has to store all of its elements in a `list` (since in the general case the elements might not be hashable),
             so certain operations may take linear time. This includes `Table.remove`, `Table.add` with `overwrite=True`, and possibly more.
         
-        :param field: The name of the field to index by.
+        :param name: The name of the field to index by.
+        :param getfield: A `FieldGetter` retrieving the associated field.
+            Defaults to the table's default `getfield` function for the speficied field.
         :param none_means_empty: If `False`, `None` is treated as a regular value.
-            If `True`, `None` is treated the same as the lack of the `on_field` attribute.
+            If `True`, `None` is treated the same as the lack of the indexed field.
             Defaults to `True`.
         
         :returns: The table instance for convenient chaining.
@@ -95,12 +98,12 @@ class Table[Elem, Indexes = _IndexDirectoryProxy[Elem]]:
         
         if self.has_primary_index:
             raise PrimaryIndexError(
-                f"Cannot create new primary index on {field!r} because a primary index already exists on {self.primary_index.on_field!r}",
+                f"Cannot create new primary index on {name!r} because a primary index already exists on {self.primary_index.name!r}",
             )
         
-        if field in self._indexes:
+        if name in self._indexes:
             raise PrimaryIndexError(
-                f"Cannot create new primary index on {field!r} because another index already exists on that field",
+                f"Cannot create new primary index on {name!r} because another index already exists on that field",
             )
         
         kind: type[UniqueIndex[Elem]] = UniqueIndex
@@ -113,21 +116,25 @@ class Table[Elem, Indexes = _IndexDirectoryProxy[Elem]]:
             
             kind = SortedUniqueIndex
         
-        index: UniqueIndex[Elem] = kind(field, self._getfield, none_means_empty=none_means_empty, required=True)
+        if getfield is None:
+            getfield = self._getfield_factory(name)
+        
+        index: UniqueIndex[Elem] = kind(name, getfield, none_means_empty=none_means_empty, required=True)
         
         for item in self._contents:
             index.register(item)
         
         self._contents = index
-        self._indexes[field] = index
+        self._indexes[name] = index
         
         return self
     
     def index_on(
         self,
-        field: str,
+        name: str,
         kind: type[Index] = UniqueIndex,
         # TODO: Support inferring index kind from several flags?
+        getfield: FieldGetter[Elem] | None = None,
         *,
         none_means_empty: bool = True,
         required: bool = False,
@@ -136,8 +143,10 @@ class Table[Elem, Indexes = _IndexDirectoryProxy[Elem]]:
         """
         Creates a new index on a specific field.
         
-        :param field: The name of the field to index by. This will also be the name of the index.
+        :param name: The name of the field to index by. This will also be the name of the index.
         :param kind: The type of index to create. Defaults to UniqueIndex. TODO: List available types.
+        :param getfield: A `FieldGetter` retrieving the associated field.
+            Defaults to the table's default `getfield` function for the speficied field.
         :param none_means_empty: If `True`, a `None` value for the field is treated the same as the absence of the field.
             If `False`, `None` is treated as a regular value.
             Defaults to `True`.
@@ -152,15 +161,25 @@ class Table[Elem, Indexes = _IndexDirectoryProxy[Elem]]:
         if not issubclass(kind, Index):
             raise TypeError(f"Index type {kind} must be a subclass of Index")
         
-        self._indexes[field] = kind(
-            field,
-            self._getfield,
+        if name in self._indexes:
+            raise PrimaryIndexError(
+                f"Cannot create new index on {name!r} because another index already exists on that field",
+            )
+        
+        if getfield is None:
+            getfield = self._getfield_factory(name)
+        
+        self._indexes[name] = kind(
+            name,
+            getfield,
             none_means_empty=none_means_empty,
             required=required,
             **kwargs,
         )
         
         return self
+    
+    # TODO: drop_index?
     
     @property
     def has_primary_index(self) -> bool:
@@ -212,7 +231,7 @@ class Table[Elem, Indexes = _IndexDirectoryProxy[Elem]]:
             
             for index in self._indexes.values():
                 if overwrite:
-                    key = self._getfield(elem, index.on_field)
+                    key = index.getfield(elem)
                     if key in index:
                         old = index[key]
                         for other_elem in index.result_items(old):
@@ -379,7 +398,7 @@ class Table[Elem, Indexes = _IndexDirectoryProxy[Elem]]:
                 return True
             
             item = typing.cast(Elem, item)
-            key = self._getfield(item, self.primary_index.on_field)
+            key = self.primary_index.getfield(item)
             
             return key in self.primary_index and self.primary_index[key] == item
         
