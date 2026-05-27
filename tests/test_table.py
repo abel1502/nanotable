@@ -60,23 +60,30 @@ class TestTable:
         
         t = Table(getfield_factory=lambda name: lambda obj: 123)
         assert t._getfield_factory("foo")(None) == 123
+        
+        with pytest.raises(TypeError):
+            Table(of_objects=True, of_dicts=True)
+        
+        with pytest.raises(TypeError):
+            Table(of_objects=True, getfield_factory=nanotable.field.getfield_attr)
+        
+        with pytest.raises(TypeError):
+            Table(of_dicts=True, getfield_factory=nanotable.field.getfield_item)
     
-    def test_of_objects_by_default(self) -> None:
-        table = Table[MyObject]()\
-            .primary_index_on("id")
+    def test_primary_index_collision(self) -> None:
+        table = Table[MyObject]()
         
-        table.add(MyObject(1, "Foo"))
-
-        assert table[1].name == "Foo"
+        table.index_on("id")
         
-        with pytest.raises(ValueError, match=r"[\'\"]id[\'\"]"):
-            table.add({"id": 2, "name": "Bar"})  # type: ignore
+        with pytest.raises(PrimaryIndexError, match=r"another index already exists"):
+            table.primary_index_on("id")
 
     def test_primary_index(self) -> None:
         table = Table[MyObject]()
         
         table.add(MyObject(1, "Foo"))
         
+        assert len(table) == 1
         assert not table.has_primary_index
         
         with pytest.raises(PrimaryIndexError):
@@ -84,12 +91,39 @@ class TestTable:
         
         table.primary_index_on("id")
         
+        assert len(table) == 1
         assert table.has_primary_index
         
         assert table[1].name == "Foo"
         assert table.primary_index[1].name == "Foo"
         assert table.by.id[1].name == "Foo"
         
-        with pytest.raises(ValueError, match=r"[\'\"]id[\'\"]"):
-            table.add({"id": 2, "name": "Bar"})
+        table.add(MyObject(2, "Bar"))
+        
+        assert len(table) == 2
+        
+        assert table[1].name == "Foo"
+        assert table[2].name == "Bar"
+        assert table.primary_index[1].name == "Foo"
+        assert table.primary_index[2].name == "Bar"
+        assert table.by.id[1].name == "Foo"
+        assert table.by.id[2].name == "Bar"
+        
+        with pytest.raises(ValueError, match=r"[\'\"]id[\'\"]") as e:
+            table.add({"id": 3, "name": "Baz"})  # type: ignore
+        
+        # Helpful error message anticipating a common mistake
+        e.match(r"`of_dicts`")
+        
+        with pytest.raises(PrimaryIndexError, match=r"primary index already exists"):
+            table.primary_index_on("name")
+    
+    def test_unique_index(self) -> None:
+        table = Table[MyObject]()
+        
+        table.add(MyObject(1, "Foo"))
+        
+        # TODO
+        
+        
 

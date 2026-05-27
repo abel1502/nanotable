@@ -60,8 +60,10 @@ class Table[Elem, Indexes = _IndexDirectoryProxy[Elem]]:
             if of_objects or getfield_factory is not None:
                 raise getfield_type_error
             getfield_factory = typing.cast(FieldGetterFactory[Elem], getfield_item)
-        elif getfield_factory is None:
-            raise getfield_type_error
+        # elif getfield_factory is None:
+        #     raise getfield_type_error
+        
+        assert getfield_factory is not None
         
         self._contents = []
         self._getfield_factory = getfield_factory
@@ -103,7 +105,7 @@ class Table[Elem, Indexes = _IndexDirectoryProxy[Elem]]:
         
         if name in self._indexes:
             raise PrimaryIndexError(
-                f"Cannot create new primary index on {name!r} because another index already exists on that field",
+                f"Cannot create new primary index on {name!r} because another index already exists on {name!r}",
             )
         
         kind: type[UniqueIndex[Elem]] = UniqueIndex
@@ -156,14 +158,16 @@ class Table[Elem, Indexes = _IndexDirectoryProxy[Elem]]:
         :param kwargs: Other keyword arguments to the index constructor.
         
         :returns: The table instance for convenient chaining.
+        
+        :raises KeyError: If an index with this name already exists.
         """
         
         if not issubclass(kind, Index):
             raise TypeError(f"Index type {kind} must be a subclass of Index")
         
         if name in self._indexes:
-            raise PrimaryIndexError(
-                f"Cannot create new index on {name!r} because another index already exists on that field",
+            raise KeyError(
+                f"Cannot create new index on {name!r} because another index with this name already exists",
             )
         
         if getfield is None:
