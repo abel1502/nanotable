@@ -160,12 +160,22 @@ class Index[
         self._lookup.clear()
     
     def _no_required_field(self, elem: Obj) -> None:
-        raise ValueError(
-            f"Element {elem!r} has no field for the required index on {self.name!r}. "
-            f"If this seems like a mistake, ensure you create the table with the appropriate "
-            f"value for `of_objects` / `of_dicts` / `getfield_factory`, or the index with the "
-            f"appropriate `getfield`."
-        )
+        error_msg: str = f"Element {elem!r} has no field for the required index on {self.name!r}."
+        
+        if isinstance(elem, typing.Mapping) and self.name in elem:
+            raise ValueError(
+                f"{error_msg} The element has a field named {self.name!r}, but it's a mapping item. "
+                f"Consider passing `on_dicts=True` to the table constructor, or `getfield_item` as "
+                f"`getfield` to the index constructor.",
+            )
+        elif hasattr(elem, self.name):
+            raise ValueError(
+                f"{error_msg} The element has a field named {self.name!r}, but it's an object attribute. "
+                f"Consider passing `on_objects=True` to the table constructor, or `getfield_attr` as "
+                f"`getfield` to the index constructor.",
+            )
+        
+        raise ValueError(error_msg)
     
     @typing.overload
     def get(self, key: Key, /) -> Result:
