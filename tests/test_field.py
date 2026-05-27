@@ -29,27 +29,22 @@ def test_field_getter_types() -> None:
     factory_item: FieldGetterFactory[typing.Mapping[str, typing.Any]] = getfield_item
 
 
-def test_getfield_attr(subtests: pytest.Subtests) -> None:
-    objects: list[object] = []
-    
-    objects.append(SimpleNamespace(a=1, b=2))
-    
-    @dataclass
-    class MyDataclass:
-        a: int
-        b: int
-    
-    objects.append(MyDataclass(1, 2))
-    
-    # TODO: More?
-    
+@dataclass
+class MyDataclass:
+    a: int
+    b: int
+
+
+@pytest.mark.parametrize("obj", [
+    SimpleNamespace(a=1, b=2),
+    MyDataclass(a=1, b=2),
+])
+def test_getfield_attr(obj: object) -> None:
     getter_a = getfield_attr("a")
     getter_missing = getfield_attr("not_present")
     
-    for obj in objects:
-        with subtests.test(obj=obj):
-            assert getter_a(obj) == 1
-            assert getter_missing(obj) is MISSING
+    assert getter_a(obj) == 1
+    assert getter_missing(obj) is MISSING
 
 
 def test_getfield_dict() -> None:
