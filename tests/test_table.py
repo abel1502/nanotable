@@ -109,12 +109,6 @@ class TestTable:
         assert table.by.id[1].name == "Foo"
         assert table.by.id[2].name == "Bar"
         
-        with pytest.raises(ValueError, match=r"[\'\"]id[\'\"]") as e:
-            table.add({"id": 3, "name": "Baz"})  # type: ignore
-        
-        # Helpful error message anticipating a common mistake
-        e.match(r"`of_dicts`")
-        
         with pytest.raises(PrimaryIndexError, match=r"primary index already exists"):
             table.primary_index_on("name")
     

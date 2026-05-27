@@ -1,11 +1,12 @@
 from __future__ import annotations
 import typing
+from types import SimpleNamespace
 
 import pytest
 
 import nanotable.index
 from nanotable.index import UniqueIndex, MultiIndex
-from nanotable.field import getfield_item
+from nanotable.field import FieldGetter, getfield_item, getfield_attr
 from nanotable.errors import ValidationError
 from nanotable.safety import IndexedFieldChangedWarning
 
@@ -19,8 +20,8 @@ def test_exports() -> None:
 
 
 class TestUniqueIndex:
-    def create(self, **kwargs) -> UniqueIndex[dict[str, typing.Any]]:
-        return UniqueIndex("id", getfield_item("id"), **kwargs)
+    def create(self, getfield: FieldGetter[typing.Any] = getfield_item("id"), **kwargs) -> UniqueIndex[dict[str, typing.Any]]:
+        return UniqueIndex("id", getfield, **kwargs)
     
     def test_normal(self) -> None:
         index = self.create(required=True)
@@ -205,6 +206,21 @@ class TestUniqueIndex:
         assert index.get(1) == obj1
         assert index.get(2) == obj2
         assert index.get(3) == obj3
+    
+    def test_helpful_errors(self) -> None:
+        index_item = self.create(getfield=getfield_item("id"), required=True)
+        
+        with pytest.raises(ValueError, match=r"[\'\"]id[\'\"]") as e:
+            index_item.register(SimpleNamespace(id=1, other="foo"))  # type: ignore
+        
+        assert e.match(r"of_objects")
+        
+        index_attr = self.create(getfield=getfield_attr("id"), required=True)
+        
+        with pytest.raises(ValueError, match=r"[\'\"]id[\'\"]") as e:
+            index_attr.register({"id": 1, "other": "foo"})  # type: ignore
+        
+        assert e.match(r"of_dicts")
 
 
 class TestMultiIndex:

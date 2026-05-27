@@ -26,6 +26,9 @@ def getfield_attr(key: str) -> FieldGetter[object]:
 
 def getfield_item(key: str) -> FieldGetter[typing.Mapping[str, typing.Any]]:
     def getter(obj: typing.Mapping[str, typing.Any]) -> typing.Any | typeof_MISSING:
+        if not isinstance(obj, typing.Mapping):
+            return MISSING
+        
         return obj.get(key, MISSING)
     
     return getter

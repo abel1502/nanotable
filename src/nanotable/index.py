@@ -164,14 +164,14 @@ class Index[
         
         if isinstance(elem, typing.Mapping) and self.name in elem:
             raise ValueError(
-                f"{error_msg} The element has a field named {self.name!r}, but it's a mapping item. "
-                f"Consider passing `on_dicts=True` to the table constructor, or `getfield_item` as "
+                f"{error_msg} The element appears to have a mapping item named {self.name!r} instead. "
+                f"Consider passing `of_dicts=True` to the table constructor, or `getfield_item` as "
                 f"`getfield` to the index constructor.",
             )
         elif hasattr(elem, self.name):
             raise ValueError(
-                f"{error_msg} The element has a field named {self.name!r}, but it's an object attribute. "
-                f"Consider passing `on_objects=True` to the table constructor, or `getfield_attr` as "
+                f"{error_msg} The element appears to have an object attribute named {self.name!r} instead. "
+                f"Consider passing `of_objects=True` to the table constructor, or `getfield_attr` as "
                 f"`getfield` to the index constructor.",
             )
         
