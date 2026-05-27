@@ -242,8 +242,7 @@ class Table[Elem, Indexes = _IndexDirectoryProxy[Elem]]:
                 if overwrite:
                     key = index.getfield(elem)
                     if key in index:
-                        old = index[key]
-                        for other_elem in index.result_items(old):
+                        for other_elem in list(index.result_items(index[key])):
                             self.remove(other_elem)
                             tx.add_undo(partial(self.add, other_elem))
                 
