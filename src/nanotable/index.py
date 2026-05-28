@@ -22,8 +22,6 @@ class Index[
     figure out a way to make the typing work with inheriting from Index, create an
     issue on GitHub with an explanation of your use case and I'll consider generalizing
     this base class for you.
-    
-    TODO: List methods
     """
     
     __slots__ = (
@@ -322,8 +320,6 @@ class Index[
 class UniqueIndex[Obj, Key = typing.Any](Index[Obj, Obj, Key]):
     """
     A unique index lets you look up the single element with a certain value of one of the fields.
-    
-    TODO: List methods
     """
     
     @typing.override
@@ -350,9 +346,8 @@ class MultiIndex[Obj, Key = typing.Any](Index[Obj, list[Obj], Key]):
     with a certain value of one of their fields.
     It is essentially the opposite of UniqueIndex.
     
-    When
-    
-    TODO: List methods
+    When an index has no elements matching a certain key, the result in an empty list,
+    not a `KeyError`.
     """
     
     @typing.override
@@ -477,8 +472,6 @@ try:
         """
         A variant of UniqueIndex that also maintains the sorted order of
         the keys, enabling efficient range queries.
-        
-        TODO: List methods
         """
     
     
@@ -490,8 +483,6 @@ try:
         .. Note::
             The order of the elements with the same value of the indexed field
             returned for any ranged query is unspecified.
-        
-        TODO: List methods
         """
     
     

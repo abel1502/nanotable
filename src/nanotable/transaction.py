@@ -32,8 +32,6 @@ class Transaction:
     
     Once a transaction is committed or rolled back, it is reset to the intial
     state (all undo steps are discarded) and can be used again.
-    
-    TODO: List methods
     """
     
     __slots__ = ("_stack",)
