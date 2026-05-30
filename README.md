@@ -31,8 +31,6 @@ There are several situations where you might want to use Nanotable:
   version of Nanotable at some point in your life -- now you can use a well-tested
   library instead.
 
------
-
 ## Installation
 
 ```console
