@@ -4,14 +4,14 @@ import typing
 import pytest
 
 import nanotable.safety
-from nanotable.safety import IndexedFieldChangedWarning, verify_immutable_key
+from nanotable.safety import verify_immutable_key
+from nanotable.errors import IndexedFieldChangedWarning
 
 
 def test_exports() -> None:
     exports = nanotable.safety.__all__
     
     assert "disable_safety_checks" in exports
-    assert "IndexedFieldChangedWarning" in exports
     assert "verify_immutable_key" in exports
 
 

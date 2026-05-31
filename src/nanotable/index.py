@@ -272,7 +272,7 @@ class Index[
     @typing.override
     def keys(self) -> typing.KeysView[Key]:
         """
-        Returns the keys of the objects registered in the index.
+        Returns the keys of the objects or object groups registered in the index.
         The order is unspecified.
         """
         
@@ -281,7 +281,7 @@ class Index[
     @typing.override
     def values(self) -> typing.ValuesView[Result]:
         """
-        Returns the objects registered in the index.
+        Returns the objects or object groups registered in the index.
         The order is unspecified.
         """
         
@@ -290,7 +290,7 @@ class Index[
     @typing.override
     def items(self) -> typing.ItemsView[Key, Result]:
         """
-        Returns the key-object pairs for the objects registered in the index.
+        Returns the key-object or key-object group pairs for the objects or object groups registered in the index.
         The order is unspecified.
         """
         
@@ -313,8 +313,22 @@ class Index[
     @abstractmethod
     def result_items(self, result: Result) -> typing.Iterable[Obj]:
         """
-        Unpacks a results into a sequence of individual objects.
+        Unpacks a result (object or group of objects) into a sequence of individual objects.
         """
+    
+    def objects(self) -> typing.Iterable[Obj]:
+        """
+        Returns all objects registered in the index. Automatically flattens groups.
+        """
+        
+        return itertools.chain.from_iterable(self.result_items(result) for result in self.values())
+    
+    def num_objects(self) -> int:
+        """
+        Returns the number of objects registered in the index.
+        """
+        
+        return len(self.objects())
 
 
 class UniqueIndex[Obj, Key = typing.Any](Index[Obj, Obj, Key]):
@@ -337,6 +351,10 @@ class UniqueIndex[Obj, Key = typing.Any](Index[Obj, Obj, Key]):
     @typing.override
     def result_items(self, result: Obj) -> typing.Iterable[Obj]:
         return [result]
+    
+    @typing.override
+    def num_objects(self) -> int:
+        return len(self._lookup)
 
 
 # TODO: instead of list[Obj], use Group[Obj]

@@ -272,6 +272,7 @@ class Table[Elem, Indexes = _IndexDirectoryProxy[Elem]]:
         
         :param elem: The element to add.
         :param overwrite: If `True`, overwrite the element if it already exists in the table.
+        TODO: Add a parameter to switch between "faster but rollback shuffles some elements" and "slower but order preservation is guaranteed". Update docs about element order.
         
         :raises ConflictError: If `overwrite` is `False` and the element has collisions on any indexed field.
         """
