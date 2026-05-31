@@ -7,7 +7,7 @@ import pytest
 import nanotable.table
 from nanotable.table import Table
 import nanotable.field
-from nanotable.errors import PrimaryIndexError
+from nanotable.errors import ConflictError, UnfinishedTableError
 
 
 def test_exports() -> None:
@@ -75,41 +75,36 @@ class TestTable:
         
         table.index_on("id")
         
-        with pytest.raises(PrimaryIndexError, match=r"another index already exists"):
+        with pytest.raises(ConflictError, match=r"another index with that name already exists"):
             table.primary_index_on("id")
 
     def test_primary_index(self) -> None:
         table = Table[MyObject]()
         
-        table.add(MyObject(1, "Foo"))
+        obj = MyObject(1, "Foo")
         
-        assert len(table) == 1
-        assert not table.has_primary_index
+        with pytest.raises(UnfinishedTableError, match=r"primary_index_on"):
+            table.add(obj)
         
-        with pytest.raises(PrimaryIndexError):
-            table[1]
+        assert len(table) == 0
         
         table.primary_index_on("id")
         
-        assert len(table) == 1
-        assert table.has_primary_index
+        table.add(obj)
         
-        assert table[1].name == "Foo"
-        assert table.primary_index[1].name == "Foo"
-        assert table.by.id[1].name == "Foo"
+        assert len(table) == 1
+        assert obj in table
+        assert table.at[1] == obj
         
         table.add(MyObject(2, "Bar"))
         
         assert len(table) == 2
-        
-        assert table[1].name == "Foo"
-        assert table[2].name == "Bar"
-        assert table.primary_index[1].name == "Foo"
-        assert table.primary_index[2].name == "Bar"
+        assert table.at[1].name == "Foo"
+        assert table.at[2].name == "Bar"
         assert table.by.id[1].name == "Foo"
         assert table.by.id[2].name == "Bar"
         
-        with pytest.raises(PrimaryIndexError, match=r"primary index already exists"):
+        with pytest.raises(ConflictError, match=r"another primary index"):
             table.primary_index_on("name")
     
     def test_unique_index(self) -> None:

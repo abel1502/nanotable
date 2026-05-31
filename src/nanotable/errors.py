@@ -11,9 +11,9 @@ class ConflictError(Exception):
     """
 
 
-class PrimaryIndexError(Exception):
+class UnfinishedTableError(Exception):
     """
-    An exception signaling a problem with the table's primary index.
+    An exception signaling that the table was used before its construction was complete.
     """
 
 
@@ -59,7 +59,7 @@ class UnsupportedOperationWarning(Warning):
 
 __all__ = [
     "ConflictError",
-    "PrimaryIndexError",
+    "UnfinishedTableError",
     "FeatureError",
     "warn",
     "IndexedFieldChangedWarning",

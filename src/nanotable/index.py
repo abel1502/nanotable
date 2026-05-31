@@ -328,7 +328,7 @@ class Index[
         Returns the number of objects registered in the index.
         """
         
-        return len(self.objects())
+        return sum(1 for _ in self.objects())
 
 
 class UniqueIndex[Obj, Key = typing.Any](Index[Obj, Obj, Key]):
@@ -357,7 +357,7 @@ class UniqueIndex[Obj, Key = typing.Any](Index[Obj, Obj, Key]):
         return len(self._lookup)
 
 
-# TODO: instead of list[Obj], use Group[Obj]
+# TODO: instead of list[Obj], use a customizable Storage[Obj]?
 class MultiIndex[Obj, Key = typing.Any](Index[Obj, list[Obj], Key]):
     """
     A multi-index is an index that lets you look up all elements

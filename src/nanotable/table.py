@@ -5,22 +5,48 @@ from functools import partial
 
 from nanotable.index import Index, UniqueIndex
 from nanotable.transaction import Transaction
+from nanotable.storage import Storage, DummyStorage, IndexViewStorage
 from nanotable.field import FieldGetterFactory, FieldGetter, getfield_attr, getfield_item, MISSING
-from nanotable.errors import PrimaryIndexError, FeatureError
+from nanotable.errors import ConflictError, FeatureError
 
 
-class Table[Elem, Indexes = _IndexDirectoryProxy[Elem]]:
+class Table[Elem, Indexes = _IndexDirectoryProxy[Elem], PrimaryIndex: Index[typing.Any] = Index[Elem]]:
     """
-    A `Table` is a generalization of a `dict`, something similar to an SQL table.
+    A `Table` stores a collection of Python objects and indexes on them.
+    It provides the functionality similar to a database + ORM, but without the associated
+    overhead and fully within the Python interpreter.
     
-    A `Table` stores regular Python objects and allows you to look them up based on certain properties.
+    ### Storage
     
-    Under the hood, it uses several `dict`s (and sometimes a `list`) to store the data and
-    provide efficient access to it both in terms of memory and time.
+    The way a table stores its elements is defined by the chosen `Storage` subclass.
+    It controls whether the objects are unordered, retain the insertion order or
+    sorted; whether duplicates are allowed; if one of the fields acts as a primary
+    key; and so on. Check out `nanotable.storage` for existing implementations or
+    if you want to implement your own.
+    
+    If your table has at least one `required` index, you might not need a storage.
+    In this case, you can save on some memory by using an `IndexViewStorage`,
+    which will make the chosen index act as the source of truth and the de-facto
+    primary key for the table.
+    
+    ### Indexes
+    
+    Indexes provide a lookup for objects based on a certain property (usually referred to as a field).
+    The semantics of an index are defined by the chosen `Index` subclass.
+    In general, an index contains a `dict`, from the field value to the matching object or objects,
+    which is updates every time an object is added or removed. Check out the `index_on` method for
+    how to create an index for a table, and the `nanotable.index` module for existing implementations
+    or if you want to implement your own.
+    
+    While normally a field is either an object attribute or a mapping item, you can use a custom
+    function to define an ephemeral field. For example, this could be used to create an index
+    on a pair of fields, or a nested field. See the `getfield` parameter in `index_on` for more details.
+    Note, however, that it is generally recommended to define a `@property` on the object instead, where
+    possible, for better clarity.
     
     TODO: List methods
     
-    ## TEMPORARY brainstorming: (TODO: Remove)
+    ### TEMPORARY brainstorming: (TODO: Remove)
     
     - A table is a collection of elements.
     - Duplicates are not expressly forbidden.
@@ -68,37 +94,70 @@ class Table[Elem, Indexes = _IndexDirectoryProxy[Elem]]:
         "_indexes",
     )
     
-    # TODO: instead of list[Elem], use Group[Elem]?
-    _contents: list[Elem] | UniqueIndex[Elem]
+    _contents: Storage[Elem]
     _getfield_factory: FieldGetterFactory[Elem]
     _indexes: dict[str, Index[Elem]]
     
+    # TODO: Accept storage type and initial objects, or just a storage object.
+    # TODO: a special constructor or some keyword arguments for defining a table with a primary key.
     def __init__(
         self,
+        storage: Storage[Elem] | None = None,
         *,
+        of: typing.Type[Elem] | None = None,
         of_objects: bool = False,
         of_dicts: bool = False,
         getfield_factory: FieldGetterFactory[Elem] | None = None,
     ):
         """
-        Creates an empty table.
+        Creates a table.
         
-        :param of_objects: If `True`, the table stores objects. If `of_dicts` and `getfield` aren't set, this defaults to `True`.
+        The table can store arbitrary objects, so it needs to be instructed how to access their fields.
+        The two most common configurations are object attributes (`foo.bar`), enabled with `of_objects=True`, and mapping items
+        (`foo["bar"]`), enabled via `of_dicts=True`. `Table` can infer one of these two based on the intended type of its
+        elements, provided via the `of` argument (if it is a `typing.Mapping`, `of_dicts` will be set to `True`;
+        otherwise, `of_objects` will be set to `True`). Finally, you may specify an explicit `getfield_factory` to use.
+        `of_objects=True` is equivalent to `getfield_factory=getfield_attr`, `of_dicts=True` is equivalent to
+        `getfield_factory=getfield_item`. All four of `of`, `of_objects`, `of_dicts` and `getfield_factory` are mutually
+        exclusive. If you don't specify anything, `of_objects` is assumed by default, but it is recommended to specify
+        something explicitly for better compatibility with future versions of the library.
+        
+        You may specify the kind of storage the table will use to keep track of its elements with the `storage` argument.
+        Different storage implementations have different semantics (element order, duplicates, etc.) and different
+        performance tradeoffs. See `nanotable.storage` for the existing implementations and for help with creating your own.
+        Make sure to understand the limitations of the chosen storage type before using it.
+        
+        If you don't specify `storage`, you must call `primary_index_on` to define a primary index before using the table.
+        This will also create an `IndexViewStorage` for you. This is the recommended configuration for most cases,
+        as it affords the best performance and memory efficiency. 
+          
+        :param storage: The storage to use. If not specified, you must call `primary_index_on` before using the table.
+        :param of: The type of the objects intended to be stored in the table. If set, used to infer `of_objects` or `of_dicts`.
+        :param of_objects: If `True`, the table stores objects.
         :param of_dicts: If `True`, the table stores dictionaries.
         :param getfield: A `FieldGetter` to use for this table. Used to switch between mapping item, object attribute and other definitions of a field.
         """
         
-        if not of_objects and not of_dicts and getfield_factory is None:
+        if of is None and not of_objects and not of_dicts and getfield_factory is None:
             of_objects = True
         
-        getfield_type_error = TypeError("You must specify either `of_objects`, `of_dicts` or a custom `getfield_factory` function when creating a table")
+        getfield_type_error = TypeError("You must specify one and only one of `of_objects`, `of_dicts` or a custom `getfield_factory` function when creating a table")
         
+        if of is not None:
+            if of_objects or of_dicts or getfield_factory is not None:
+                raise getfield_type_error
+            if not isinstance(of, type):
+                raise TypeError(f"`of` must be a type, not {type(of)}")
+            if issubclass(of, typing.Mapping):
+                getfield_factory = typing.cast(FieldGetterFactory[Elem], getfield_item)
+            else:
+                getfield_factory = typing.cast(FieldGetterFactory[Elem], getfield_attr)
         if of_objects:
-            if of_dicts or getfield_factory is not None:
+            if of is not None or of_dicts or getfield_factory is not None:
                 raise getfield_type_error
             getfield_factory = typing.cast(FieldGetterFactory[Elem], getfield_attr)
         elif of_dicts:
-            if of_objects or getfield_factory is not None:
+            if of is not None or of_objects or getfield_factory is not None:
                 raise getfield_type_error
             getfield_factory = typing.cast(FieldGetterFactory[Elem], getfield_item)
         # elif getfield_factory is None:
@@ -106,28 +165,55 @@ class Table[Elem, Indexes = _IndexDirectoryProxy[Elem]]:
         
         assert getfield_factory is not None
         
-        self._contents = []
+        if storage is None:
+            storage = DummyStorage()
+        
+        if not isinstance(storage, Storage):
+            raise TypeError(f"storage must be an instance of Storage, not {type(storage)}")
+        
+        self._contents = storage
         self._getfield_factory = getfield_factory
         self._indexes = {}
+        
+        self._accommodate_primary_index()
+    
+    def _accommodate_primary_index(self) -> None:
+        """
+        Special handling to expose the primary index via `by`
+        and to prevent duplicate updates.
+        """
+        
+        if not isinstance(self._contents, IndexViewStorage):
+            return
+        
+        self._contents.writethrough = False
+        self._indexes[self._contents.index.name] = self._contents.index
     
     def primary_index_on(
         self,
         name: str,
-        getfield: FieldGetter[Elem] | None = None,
+        getfield: FieldGetter[Elem] | None = None,  # TODO: Rename to just field and accept strings. Parse them to handle nested fields and tuples?
         *,
         none_means_empty: bool = True,
         sorted: bool = False,
     ) -> typing.Self:
         """
         Creates a new primary index on a specific field.
-        A table can only have one primary index.
+        
+        A primary index is a required unique index which is also used as the table's primary storage.
+        If you specified a custom `storage` when creating the table, you don't need `primary_index_on`
+        and should just use `index_on` for the same effect.
         
         .. Note::
-            While not obligatory, a primary index is recommended where applicable.
-            Without one, the table has to store all of its elements in a `list` (since in the general case the elements might not be hashable),
-            so certain operations may take linear time. This includes `Table.remove`, `Table.add` with `overwrite=True`, and possibly more.
+            The primary index does not technically have to be unique, but a non-unique primary index
+            involves significant performance tradeoffs (down to linear time for some operations).
+            This function cannot create a non-unique primary index. If you really want to do so
+            for some reason, use the `storage` parameter of the table constructor to pass
+            `IndexViewStorage(MultiIndex(...))` instead.
         
         :param name: The name of the field to index by.
+            TODO: Explain that it may be an actual field name or a description of what `getfield` does
+            TODO Support a tuple which is automatically converted to `"foo_and_bar_and_baz"`?
         :param getfield: A `FieldGetter` retrieving the associated field.
             Defaults to the table's default `getfield` function for the speficied field.
         :param none_means_empty: If `False`, `None` is treated as a regular value.
@@ -136,17 +222,22 @@ class Table[Elem, Indexes = _IndexDirectoryProxy[Elem]]:
         
         :returns: The table instance for convenient chaining.
         
-        :raises PrimaryIndexError: If a primary index couldn't be created.
+        :raises ConflictError: If the table already has a primary index or another custom storage configured.
+        :raises ConflictError: If a different index with the same name already exists.
         """
         
-        if self.has_primary_index:
-            raise PrimaryIndexError(
-                f"Cannot create new primary index on {name!r} because a primary index already exists on {self.primary_index.name!r}",
+        if not isinstance(self._contents, DummyStorage):
+            custom_storage_desc = f"a custom storage of type {type(self._contents).__name__}"
+            if isinstance(self._contents, IndexViewStorage):
+                custom_storage_desc = f"another primary index on {self._contents.index.name!r}"
+            
+            raise ConflictError(
+                f"Cannot create a primary index because the table already has {custom_storage_desc}",
             )
         
         if name in self._indexes:
-            raise PrimaryIndexError(
-                f"Cannot create new primary index on {name!r} because another index already exists on {name!r}",
+            raise ConflictError(
+                f"Cannot create a primary index on {name!r} because another index with that name already exists",
             )
         
         kind: type[UniqueIndex[Elem]] = UniqueIndex
@@ -169,20 +260,16 @@ class Table[Elem, Indexes = _IndexDirectoryProxy[Elem]]:
             required=True,
         )
         
-        for item in self._contents:
-            index.register(item)
-        
-        self._contents = index
-        self._indexes[name] = index
+        self._contents = IndexViewStorage(index)
+        self._accommodate_primary_index()
         
         return self
     
     def index_on(
         self,
         name: str,
-        kind: type[Index] = UniqueIndex,
-        # TODO: Support inferring index kind from several flags?
-        getfield: FieldGetter[Elem] | None = None,
+        kind: type[Index] = UniqueIndex,  # TODO: Support inferring index kind from several flags?
+        getfield: FieldGetter[Elem] | None = None,  # TODO: Rename to just field and accept strings. Parse them to handle nested fields and tuples?
         *,
         none_means_empty: bool = True,
         required: bool = False,
@@ -192,7 +279,9 @@ class Table[Elem, Indexes = _IndexDirectoryProxy[Elem]]:
         Creates a new index on a specific field.
         
         :param name: The name of the field to index by. This will also be the name of the index.
-        :param kind: The type of index to create. Defaults to UniqueIndex. TODO: List available types.
+            TODO: Explain that it may be an actual field name or a description of what `getfield` does
+            TODO Support a tuple which is automatically converted to `"foo_and_bar_and_baz"`?
+        :param kind: The type of index to create. Defaults to UniqueIndex. See `nanotable.index` for the available index types.
         :param getfield: A `FieldGetter` retrieving the associated field.
             Defaults to the table's default `getfield` function for the speficied field.
         :param none_means_empty: If `True`, a `None` value for the field is treated the same as the absence of the field.
@@ -232,25 +321,19 @@ class Table[Elem, Indexes = _IndexDirectoryProxy[Elem]]:
     # TODO: drop_index?
     
     @property
-    def has_primary_index(self) -> bool:
+    def at(self) -> PrimaryIndex:
         """
-        Whether this table has a primary index.
-        """
+        Directly accesses the primary index, if one is configured.
         
-        return isinstance(self._contents, UniqueIndex)
-    
-    @property
-    def primary_index(self) -> UniqueIndex[Elem]:
-        """
-        The primary index of the table, if any.
-        
-        :raises PrimaryIndexError: If the table has no primary index.
+        :raises TypeError: If the table has no primary index.
         """
         
-        if not self.has_primary_index:
-            raise PrimaryIndexError("Table has no primary index")
+        if not isinstance(self._contents, IndexViewStorage):
+            raise TypeError(
+                "This table has no primary index. Use `table.by.my_field` to access a specific index instead",
+            )
         
-        return typing.cast(UniqueIndex[Elem], self._contents)
+        return typing.cast(PrimaryIndex, self._contents.index)
     
     @property
     def by(self) -> Indexes:
@@ -278,9 +361,8 @@ class Table[Elem, Indexes = _IndexDirectoryProxy[Elem]]:
         """
         
         with Transaction() as tx:
-            if not self.has_primary_index:
-                typing.cast(list[Elem], self._contents).append(elem)
-                tx.add_undo(typing.cast(list[Elem], self._contents).pop)
+            self._contents.add(elem)
+            tx.add_undo(partial(self._contents.remove, elem))
             
             for index in self._indexes.values():
                 if overwrite:
@@ -308,8 +390,7 @@ class Table[Elem, Indexes = _IndexDirectoryProxy[Elem]]:
         if not missing_ok and elem not in self:
             raise KeyError(f"Attempting to remove {elem!r} which is not in the table")
         
-        if not self.has_primary_index:
-            typing.cast(list[Elem], self._contents).remove(elem)
+        self._contents.remove(elem)
         
         for index in self._indexes.values():
             index.unregister(elem)
@@ -319,8 +400,7 @@ class Table[Elem, Indexes = _IndexDirectoryProxy[Elem]]:
         Removes all elements from the table.
         """
         
-        if not self.has_primary_index:
-            typing.cast(list, self._contents).clear()
+        self._contents.clear()
         
         for index in self._indexes.values():
             index.unregister_all()
@@ -393,87 +473,32 @@ class Table[Elem, Indexes = _IndexDirectoryProxy[Elem]]:
         
     
     def __iter__(self) -> typing.Iterator[Elem]:
-        return iter(self.items())
-    
-    def __len__(self) -> int:
-        return len(self._contents)
-    
-    @typing.overload
-    def __getitem__(self, keys: slice[typing.Any | None, typing.Any | None, None]) -> typing.Iterable[Elem]:
         """
-        Looks up elements by a range of primary keys.
+        Returns an iterable over the elements of the table.
         
-        .. Note::
-            Only available with a sorted primary index!
+        The order depends on the choice of storage. Unless you know otherwise,
+        assume the order is unspecified.
         
-        :param keys: The range of primary keys to look up.
-        
-        :returns: The sequence of matching elements.
-        
-        :raises PrimaryIndexError: If the table has no primary index.
-        """
-    
-    @typing.overload
-    def __getitem__(self, key: typing.Any) -> Elem:
-        """
-        Looks up an element by its primary key.
-        
-        :param key: The primary key to look up.
-        
-        :returns: The element with the given primary key.
-        
-        :raises PrimaryIndexError: If the table has no primary index.
-        """
-    
-    def __getitem__(self, key: typing.Any | slice):
-        if not self.has_primary_index:
-            raise PrimaryIndexError("Table has no primary index")
-        
-        return self.primary_index[key]
-    
-    def __contains__(self, item: object) -> bool:
-        """
-        Checks if the item is an element of the table, OR if an element with the specified primary key is in the table, if a table has a primary key defined.
-        
-        .. Note::
-            If you only want to check the primary key, use `x in table.primary_index`.
-            
-            If you only want to check for the object presence, use `x in table.values()` (linear time, not recommended).
-        
-        :param item: The element or the primary key to check for.
-        
-        :returns: `True` if the item / the item with the given key is in the table.
-        """
-        
-        if self.has_primary_index:
-            if item in self.primary_index:
-                return True
-            
-            item = typing.cast(Elem, item)
-            key = self.primary_index.getfield(item)
-            
-            return key in self.primary_index and self.primary_index[key] == item
-        
-        return item in self._contents
-    
-    def items(self) -> typing.Iterable[Elem]:
-        """
-        Returns an iterable over the elements of the table. The order is unspecified.
-        
-        .. Note::
-            The order will match the insertion order in many cases, but this is not guaranteed.
-            In particular, if a `Table.add` call with `overwrite=True` fails, when restoring the
-            table to the original state, it may bring some elements to the end (since it removes
-            them initially, then adds them back during cleanup).
+        For a table with a unique primary key, the order will be the same as the insertion order.
         
         :returns: An iterable over the elements of the table.
         """
         
-        if self.has_primary_index:
-            return self.primary_index.values()
-        
-        # TODO: ListView or something
         return iter(self._contents)
+    
+    def __len__(self) -> int:
+        return len(self._contents)
+    
+    def __contains__(self, item: object) -> bool:
+        """
+        Checks if the item is an element of the table.
+        
+        :param item: The element to check for.
+        
+        :returns: `True` if the item is in the table.
+        """
+        
+        return item in self._contents
 
 
 class _IndexDirectoryProxy[Elem]:

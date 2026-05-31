@@ -81,6 +81,7 @@ class MyIndexes(Protocol):
     name: UniqueIndex[Person, str]
     phone: UniqueIndex[Person, str]
 
+# TODO: Document PrimaryIndex too!
 table = Table[Person, MyIndexes](of_objects=True)
 table.index_on("name", required=True)
 table.index_on("phone")
