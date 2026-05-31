@@ -7,7 +7,7 @@ import pytest
 import nanotable.index
 from nanotable.index import UniqueIndex, MultiIndex
 from nanotable.field import FieldGetter, getfield_item, getfield_attr
-from nanotable.errors import ValidationError
+from nanotable.errors import ConflictError
 from nanotable.safety import IndexedFieldChangedWarning
 
 
@@ -79,7 +79,7 @@ class TestUniqueIndex:
         
         assert index.get(None) == obj
         
-        with pytest.raises(ValidationError):
+        with pytest.raises(ConflictError):
             index.register(obj)
 
 

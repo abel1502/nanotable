@@ -4,7 +4,7 @@ from abc import ABC, abstractmethod
 import itertools
 
 from nanotable.field import FieldGetter, MISSING, typeof_MISSING
-from nanotable.errors import ValidationError
+from nanotable.errors import ConflictError
 from nanotable.safety import disable_safety_checks, verify_immutable_key
 
 
@@ -80,7 +80,7 @@ class Index[
         :param elem: The element to add.
         
         :raises ValueError: If the element has no value for the index field and it is required.
-        :raises ValidationError: If registering the element would violate some of the index invariants.
+        :raises ConflictError: If the element already exists in the index.
         """
         
         key = self.getfield(elem)
@@ -105,7 +105,7 @@ class Index[
         :param key: The key to add. Guaranteed to match the field of `elem`.
         :param elem: The element to add.
         
-        :raises ValidationError: If registering the element would violate some of the index invariants.
+        :raises ConflictError: If the element already exists in the index.
         """
     
     def unregister(self, elem: Obj, *, missing_ok: bool = False) -> None:
@@ -326,7 +326,7 @@ class UniqueIndex[Obj, Key = typing.Any](Index[Obj, Obj, Key]):
     def _register(self, key: Key, elem: Obj) -> None:
         if key in self._lookup:
             old_elem = self._lookup[key]
-            raise ValidationError(f"Duplicate value {key!r} for the unique index on {self.name!r} (existing object: {old_elem!r}, new object: {elem!r})")
+            raise ConflictError(f"Duplicate value {key!r} for the unique index on {self.name!r} (existing object: {old_elem!r}, new object: {elem!r})")
         
         self._lookup[key] = elem
     

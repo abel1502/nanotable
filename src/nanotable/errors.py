@@ -2,9 +2,9 @@ from __future__ import annotations
 import typing
 
 
-class ValidationError(Exception):
+class ConflictError(Exception):
     """
-    An exception signaling that an invariant was violated.
+    An exception signaling that a new element conflicts with one already present.
     """
 
 
@@ -26,7 +26,7 @@ class FeatureError(Exception):  # pragma: no cover # The coverage report doesn't
 
 
 __all__ = [
-    "ValidationError",
+    "ConflictError",
     "PrimaryIndexError",
     "FeatureError",
 ]

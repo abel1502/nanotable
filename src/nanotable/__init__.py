@@ -1,7 +1,7 @@
 from .table import Table
 from .index import Index, UniqueIndex, MultiIndex
 from .field import FieldGetter, getfield_attr, getfield_item, MISSING, typeof_MISSING
-from .errors import ValidationError, PrimaryIndexError
+from .errors import ConflictError, PrimaryIndexError, FeatureError
 from .__about__ import __version__
 
 __all__ = [
@@ -14,8 +14,9 @@ __all__ = [
     "getfield_item",
     "MISSING",
     "typeof_MISSING",
-    "ValidationError",
+    "ConflictError",
     "PrimaryIndexError",
+    "FeatureError",
     "__version__",
 ]
 

@@ -272,6 +272,8 @@ class Table[Elem, Indexes = _IndexDirectoryProxy[Elem]]:
         
         :param elem: The element to add.
         :param overwrite: If `True`, overwrite the element if it already exists in the table.
+        
+        :raises ConflictError: If `overwrite` is `False` and the element has collisions on any indexed field.
         """
         
         with Transaction() as tx:
