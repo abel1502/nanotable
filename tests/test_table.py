@@ -38,8 +38,7 @@ class TestTable:
         table.remove(MyObject(1, "Foo"))
         assert len(table) == 2
         
-        # Doesn't actually overwrite without a primary index to define object identity
-        # TODO: Implicit object identity as the primary index? The downside would be that tables couldn't hold duplicates.
+        # Doesn't overwrite with a MultiListStorage
         table.add(MyObject(1, "Foo"), overwrite=True)
         assert len(table) == 3
         

@@ -8,7 +8,7 @@ from nanotable.errors import ConflictError
 from nanotable.safety import disable_safety_checks, verify_immutable_key
 
 
-# TODO: Factor out the code for storing stuff in a dict into a separate subclass?
+# Long-term TODO: Factor out the code for storing stuff in a dict into a separate subclass?
 class Index[
     Obj,
     Result = typing.Any,

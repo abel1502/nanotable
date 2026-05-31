@@ -379,6 +379,7 @@ class IndexViewStorage[Obj](Storage[Obj]):
         self.index.unregister_all()
 
 
+# TODO: Only raise on mutation attempts?
 class DummyStorage[Obj](Storage[Obj]):
     """
     A placeholder storage implementation. Used by default in a table when no storage is specified.

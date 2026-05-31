@@ -3,6 +3,7 @@ import typing
 import types
 from contextlib import contextmanager
 from functools import partial
+import copy
 
 from nanotable.index import Index, UniqueIndex
 from nanotable.transaction import Transaction
@@ -25,10 +26,10 @@ class Table[Elem, Indexes = _IndexDirectoryProxy[Elem], PrimaryIndex: Index[typi
     key; and so on. Check out `nanotable.storage` for existing implementations or
     if you want to implement your own.
     
-    If your table has at least one `required` index, you might not need a storage.
-    In this case, you can save on some memory by using an `IndexViewStorage`,
-    which will make the chosen index act as the source of truth and the de-facto
-    primary key for the table.
+    If your table has at least one `required` index, you might not need a storage at all.
+    In this case you can use an `IndexViewStorage`, which will make the chosen index act
+    as the source of truth and the de-facto primary key for the table. You can also
+    forego the storage parameter and simply use the `primary_key_on` method instead.
     
     ### Indexes
     
@@ -45,48 +46,9 @@ class Table[Elem, Indexes = _IndexDirectoryProxy[Elem], PrimaryIndex: Index[typi
     Note, however, that it is generally recommended to define a `@property` on the object instead, where
     possible, for better clarity.
     
-    TODO: List methods
+    ### Interface
     
-    ### TEMPORARY brainstorming: (TODO: Remove)
-    
-    - A table is a collection of elements.
-    - Duplicates are not expressly forbidden.
-    - Elements have fields in some sense.
-    - A table can have indexes for lookup based on these fields.
-    - Indexes are notified of changes to the table.
-    - Indexes maintain internal state and provide lookups faster than a linear scan.
-    - Indexes may impose constraints on the indexed fields (hashable, unique, comparable, etc.).
-    - Tables and indexes must be as performant as an improvised data structure
-      built of `dict`s, `list`s and other standard containers for the specific task,
-      except possibly a small overhead term corresponding to the added abstraction
-      layers where inevitable.
-    
-    - Does a table allow duplicates? Yes.
-    - Is a table ordered?
-      - In general, I don't think I need to preserve insertion order. Maybe for consistency with `dict`?
-      - If multiple values returned from an index (`.get_many()` for a collection of keys?,
-        `.get` on multi-indexes, `.get_range()` on sorted indexes, ...) are to be wrapped in a table,
-        order would be significant. The upside to returning a table would be inclusion of stuff like
-        `filter` (or `where` or `select` or `query`, idk). But table's stateful functionality, like
-        indexes, would be useless there. Perhaps a separate storage abstraction?
-    
-    - Let's say a separate storage abstraction, okay. What are the alternatives?
-      - `list`. Arbitrary order. Allows duplicates. Slow.
-      - `SortedList`. Order of increasing elements (or of some property of them). Allows duplicates. Fast.
-      - `set`. No order. No duplicates. Fast. Requires hashability.
-      - `SortedSet`. Order of increasing elements (or of some property of them). No duplicates. Fast. Requires comparability.
-      - `UniqueIndex(required=True)` (primary key index). No order (can be tightened to insertion order if need be).
-        No duplicates or primary key collisions. Fast. Requires a hashable primary key.
-      - `SortedUniqueIndex(required=True)` (sorted primary key index). Order of increasing primary keys.
-        No duplicates or primary key collisions. Fast. Requires a comparable primary key.
-      - More alternatives?
-    - Can I think of an interface for a wrapper around any of these, allowing to take advantage of the strengths of all of these? "Group".
-      - Do I want a storage to be convenient when used standalone? Probably yes.
-      - Maybe the mutable interface is (documented as) package-private? As in, for a user this is supposed to be a powerful view.
-      - In general, a sequence of items. Sometimes also a mapping which is partially contradictory.
-        - Maybe drop the index-backed variants?
-        - Or reimplement them with an external index (one they don't own and only query)?
-          That deprives the group of convenient primary-index access.
+    TODO: List key methods
     """
     
     __slots__ = (
@@ -99,8 +61,6 @@ class Table[Elem, Indexes = _IndexDirectoryProxy[Elem], PrimaryIndex: Index[typi
     _getfield_factory: FieldGetterFactory[Elem]
     _indexes: dict[str, Index[Elem]]
     
-    # TODO: Accept storage type and initial objects, or just a storage object.
-    # TODO: a special constructor or some keyword arguments for defining a table with a primary key.
     def __init__(
         self,
         storage: Storage[Elem] | None = None,
@@ -356,9 +316,13 @@ class Table[Elem, Indexes = _IndexDirectoryProxy[Elem], PrimaryIndex: Index[typi
         """
         Adds an element to the table.
         
+        .. Note::
+            If `overwrite` is `True`, and an error happens while registering `elem`
+            with one of the indexes, the order of the elements can be changed.
+            Keep this in mind if you rely on the strict insertion order.
+        
         :param elem: The element to add.
         :param overwrite: If `True`, overwrite the element if it already exists in the table.
-        TODO: Add a parameter to switch between "faster but rollback shuffles some elements" and "slower but order preservation is guaranteed". Update docs about element order.
         
         :raises ConflictError: If `overwrite` is `False` and the element has collisions on any indexed field.
         """
@@ -382,21 +346,27 @@ class Table[Elem, Indexes = _IndexDirectoryProxy[Elem], PrimaryIndex: Index[typi
         """
         Remove an element from the table.
         
+        .. Note::
+            If an error happens while unregistering `elem` from one of
+            the indexes, the order of the elements can be changed.
+            Keep this in mind if you rely on the strict insertion order.
+        
         :param elem: The element to remove.
         :param missing_ok: If `False`, the element must exist in the table.
         
         :raises KeyError: If `missing_ok` is `False` and the element does not exist in the table.
         """
         
-        # TODO: Also wrap in a transaction? Shouldn't normally fail
-        
         if not missing_ok and elem not in self:
             raise KeyError(f"Attempting to remove {elem!r} which is not in the table")
         
-        self._contents.remove(elem)
-        
-        for index in self._indexes.values():
-            index.unregister(elem)
+        with Transaction() as tx:
+            self._contents.remove(elem)
+            tx.add_undo(partial(self._contents.add, elem))
+            
+            for index in self._indexes.values():
+                index.unregister(elem)
+                tx.add_undo(partial(index.register, elem))
 
     def clear(self) -> None:
         """
@@ -417,9 +387,9 @@ class Table[Elem, Indexes = _IndexDirectoryProxy[Elem], PrimaryIndex: Index[typi
         """
         
         for item in items:
-            self.add(item)
+            self.add(item, overwrite=overwrite)
     
-    # TODO: transaction / backup / something?
+    # TODO: transaction / backup / something? Maybe just a copy implementation? Or does deepcopy work out of the box?
     
     @contextmanager
     def rekey(self, obj: Elem) -> typing.Generator[None, None, None]:

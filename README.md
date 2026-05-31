@@ -42,17 +42,18 @@ pip install nanotable
 A basic usage example is given below:
 
 ```python
-from nanotable import Table, getfield_item
+from nanotable import Table
 
 table = Table(of_dicts=True)\
-    .index_on("name", required=True)\
+    .primary_index_on("name")\
     .index_on("phone")
 
 table.add({"name": "John Doe", "phone": "123-456-7890", "age": 25})
 table.add({"name": "Jane Doe", "phone": "987-654-3210", "age": 26})
 table.add({"name": "Barrack Obama", "age": "idk"})
 
-table.by.name["John Doe"]  # {"name": "John Doe", "phone": "123-456-7890", "age": 25}
+table.at["Jane Doe"]  # {"name": "Jane Doe", "phone": "987-654-3210", "age": 26}
+table.by.name["John Doe"]  # Same as above
 table.by.phone["987-654-3210"]  # {"name": "Jane Doe", "phone": "987-654-3210", "age": 26}
 
 table.remove(table.by.name["Barrack Obama"])
@@ -62,6 +63,8 @@ You can store any kind of object in the table. Specify `of_dicts=True` or `getfi
 to use mappings (`dict` or anything with `obj[key]` item access); `of_objects=True` or
 `getfield=getfield_attr` to use objects with attributes (`obj.key` access); or
 any function with the signature `(obj, key: str) -> Any | MISSING` as `getfield`.
+You can also specify `of=MyType` to have the table infer either `of_objects` or `of_dicts`
+based on the anticipated element type.
 
 ### Typing
 
@@ -71,7 +74,7 @@ you can specify the type of the objects you want to store in the table:
 ```python
 table = Table[Person](of_objects=True)
 # or
-table = Table[dict[str, Any]](of_objects=True)
+table = Table[dict[str, Any]](of_dicts=True)
 ```
 
 To add static typing to your indexes, you need to define a type with all of them:
@@ -81,9 +84,11 @@ class MyIndexes(Protocol):
     name: UniqueIndex[Person, str]
     phone: UniqueIndex[Person, str]
 
-# TODO: Document PrimaryIndex too!
-table = Table[Person, MyIndexes](of_objects=True)
-table.index_on("name", required=True)
+# The first template parameter is the object type;
+# The second template parameter is protocol for `by`;
+# The third template parameter is the primary index type.
+table = Table[Person, MyIndexes, UniqueIndex[Person, str]](of_objects=True)
+table.primary_index_on("name", required=True)
 table.index_on("phone")
 ```
 
@@ -92,6 +97,10 @@ table.index_on("phone")
 TODO: UniqueIndex, MultiIndex
 
 TODO: `[sorted]` extra and SortedUniqueIndex, SortedMultiIndex
+
+### Storage
+
+TODO
 
 ### Caveats
 
