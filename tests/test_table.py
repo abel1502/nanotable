@@ -6,7 +6,8 @@ import pytest
 
 import nanotable.table
 from nanotable.table import Table
-import nanotable.field
+from nanotable.storage import MultiListStorage
+from nanotable.field import getfield_attr, getfield_item
 from nanotable.errors import ConflictError, UnfinishedTableError
 
 
@@ -24,7 +25,7 @@ class MyObject:
 
 class TestTable:
     def test_no_index(self) -> None:
-        table = Table[MyObject](of_objects=True)
+        table = Table(storage=MultiListStorage(), of=MyObject)
         
         table.add(MyObject(1, "Foo"))
         table.add(MyObject(2, "Bar", something_incomprehensible=lambda x: x(x)))
@@ -50,13 +51,22 @@ class TestTable:
     
     def test_getfield_options(self) -> None:
         t = Table[typing.Any]()
-        assert t._getfield_factory is nanotable.field.getfield_attr
+        assert t._getfield_factory is getfield_attr
+        
+        t = Table(of=dict)
+        assert t._getfield_factory is getfield_item
+        
+        t = Table(of=dict[str, typing.Any])
+        assert t._getfield_factory is getfield_item
+        
+        t = Table(of=MyObject)
+        assert t._getfield_factory is getfield_attr
         
         t = Table(of_objects=True)
-        assert t._getfield_factory is nanotable.field.getfield_attr
+        assert t._getfield_factory is getfield_attr
         
         t = Table(of_dicts=True)
-        assert t._getfield_factory is nanotable.field.getfield_item
+        assert t._getfield_factory is getfield_item
         
         t = Table(getfield_factory=lambda name: lambda obj: 123)
         assert t._getfield_factory("foo")(None) == 123
@@ -65,10 +75,10 @@ class TestTable:
             Table(of_objects=True, of_dicts=True)
         
         with pytest.raises(TypeError):
-            Table(of_objects=True, getfield_factory=nanotable.field.getfield_attr)
+            Table(of_objects=True, getfield_factory=getfield_attr)
         
         with pytest.raises(TypeError):
-            Table(of_dicts=True, getfield_factory=nanotable.field.getfield_item)
+            Table(of_dicts=True, getfield_factory=getfield_item)
     
     def test_primary_index_collision(self) -> None:
         table = Table[MyObject]()
@@ -86,7 +96,8 @@ class TestTable:
         with pytest.raises(UnfinishedTableError, match=r"primary_index_on"):
             table.add(obj)
         
-        assert len(table) == 0
+        with pytest.raises(UnfinishedTableError, match=r"primary_index_on"):
+            len(table)
         
         table.primary_index_on("id")
         
@@ -108,11 +119,9 @@ class TestTable:
             table.primary_index_on("name")
     
     def test_unique_index(self) -> None:
-        table = Table[MyObject]()
+        table = Table(MultiListStorage(), of=MyObject)
         
         table.add(MyObject(1, "Foo"))
         
         # TODO
-        
-        
 

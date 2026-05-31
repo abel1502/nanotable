@@ -1,5 +1,6 @@
 from __future__ import annotations
 import typing
+import types
 from contextlib import contextmanager
 from functools import partial
 
@@ -146,6 +147,8 @@ class Table[Elem, Indexes = _IndexDirectoryProxy[Elem], PrimaryIndex: Index[typi
         if of is not None:
             if of_objects or of_dicts or getfield_factory is not None:
                 raise getfield_type_error
+            if isinstance(of, types.GenericAlias):
+                of = of.__origin__
             if not isinstance(of, type):
                 raise TypeError(f"`of` must be a type, not {type(of)}")
             if issubclass(of, typing.Mapping):

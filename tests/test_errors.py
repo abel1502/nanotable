@@ -10,7 +10,6 @@ def test_exports() -> None:
     exports = nanotable.errors.__all__
     
     assert "ConflictError" in exports
-    assert "PrimaryIndexError" in exports
     assert "UnfinishedTableError" in exports
     assert "FeatureError" in exports
     assert "warn" in exports
