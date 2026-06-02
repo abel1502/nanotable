@@ -1,0 +1,40 @@
+name: validate
+
+on:
+  workflow_dispatch:
+    inputs:
+      revision:
+        description: Git revision to validate
+        required: true
+        default: master
+        type: string
+  workflow_call:
+    inputs:
+      revision:
+        description: Git revision to validate
+        required: true
+        type: string
+
+jobs:
+  validate:
+    name: Validate and test
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+
+    steps:
+      - name: Checkout revision
+        uses: actions/checkout@v5
+        with:
+          ref: ${{ inputs.revision }}
+
+      - name: Set up uv and Python
+        uses: astral-sh/setup-uv@v7
+        with:
+          python-version: "3.14"
+
+      - name: Type-check
+        run: uvx hatch run dev-ci:type-check
+
+      - name: Test
+        run: uvx hatch run dev-ci:test

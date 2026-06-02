@@ -6,37 +6,9 @@ on:
 
 jobs:
   validate:
-    name: Validate and test
-    runs-on: ubuntu-latest
-    permissions:
-      contents: read
-    
-    steps:
-      - name: Checkout release tag
-        uses: actions/checkout@v5
-        with:
-          ref: refs/tags/${{ github.event.release.tag_name }}
-
-      - name: Set up uv and Python
-        uses: astral-sh/setup-uv@v7
-        with:
-          python-version: ${{ matrix.python-version }}
-
-      - name: Verify release metadata matches package version
-        run: |
-          set -euo pipefail
-          VERSION="$(uvx hatch version)"
-          TAG="${{ github.event.release.tag_name }}"
-          NAME="${{ github.event.release.name }}"
-
-          test "$TAG" = "$VERSION"
-          test "$NAME" = "$VERSION"
-
-      - name: Type-check
-        run: uvx hatch run dev-ci:type-check
-
-      - name: Test
-        run: uvx hatch run dev-ci:test
+    uses: ./.github/workflows/validate.yml
+    with:
+      revision: refs/tags/${{ github.event.release.tag_name }}
 
   publish:
     name: Build and publish
@@ -56,6 +28,16 @@ jobs:
         uses: astral-sh/setup-uv@v7
         with:
           python-version: "3.14"
+
+      - name: Verify release metadata matches package version
+        run: |
+          set -euo pipefail
+          VERSION="$(uvx hatch version)"
+          TAG="${{ github.event.release.tag_name }}"
+          NAME="${{ github.event.release.name }}"
+
+          test "$TAG" = "$VERSION"
+          test "$NAME" = "$VERSION"
 
       - name: Build distributions
         run: uv build --no-sources
