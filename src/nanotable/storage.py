@@ -120,6 +120,15 @@ class WrapperStorage[Obj, Impl: typing.Collection[typing.Any]](Storage[Obj]):
         return obj in self._impl
 
 
+def _list_remove_last[Obj](lst: list[Obj], obj: Obj) -> None:
+    for i in range(len(lst) - 1, -1, -1):
+        if lst[i] != obj:
+            continue
+        
+        del lst[i]
+        return
+
+
 class ListStorage[Obj](WrapperStorage[Obj, list[Obj]]):
     """
     Stores objects in a `list`.
@@ -152,8 +161,8 @@ class ListStorage[Obj](WrapperStorage[Obj, list[Obj]]):
         if not missing_ok and obj not in self._impl:
             raise KeyError(f"Element {obj!r} does not exist in storage")
         
-        # TODO: Go from the back for better performance
-        self._impl.remove(obj)
+        # Optimizing for the stack-like usage pattern, removal from the back
+        _list_remove_last(self._impl, obj)
     
     @typing.override
     def clear(self) -> None:
@@ -165,7 +174,7 @@ class MultiListStorage[Obj](WrapperStorage[Obj, list[Obj]]):
     Stores objects in a `list`, but allows duplicates.
     
     - Preserves insertion order.
-    - Removal removes the first occurrence.  TODO: Last instead for better performance.
+    - Removal removes the last occurrence.
     - Allows duplicates.
     - Presence checks and `remove` are linear time.
     - `add(overwrite=True)` is not implemented. It will issue a warning and behave like `add(overwrite=False)`.
@@ -189,8 +198,7 @@ class MultiListStorage[Obj](WrapperStorage[Obj, list[Obj]]):
         if not missing_ok and obj not in self._impl:
             raise KeyError(f"Element {obj!r} does not exist in storage")
         
-        # TODO: Go from the back for better performance
-        self._impl.remove(obj)
+        _list_remove_last(self._impl, obj)
     
     @typing.override
     def clear(self) -> None:
