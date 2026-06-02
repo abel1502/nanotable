@@ -80,7 +80,7 @@ class Index[
         :param elem: The element to add.
         
         :raises ValueError: If the element has no value for the index field and it is required.
-        :raises ConflictError: If the element already exists in the index.
+        :raises ConflictError: If the element (or another element with the same key) already exists in the index and the index is unique.
         """
         
         key = self.getfield(elem)
@@ -105,7 +105,7 @@ class Index[
         :param key: The key to add. Guaranteed to match the field of `elem`.
         :param elem: The element to add.
         
-        :raises ConflictError: If the element already exists in the index.
+        :raises ConflictError: If the element (or another element with the same key) already exists in the index and the index is unique.
         """
     
     def unregister(self, elem: Obj, *, missing_ok: bool = False) -> None:
@@ -131,10 +131,12 @@ class Index[
         
         key = typing.cast(Key, key)
         
-        if key in self._lookup:
-            self._unregister(key, elem)
-        elif not missing_ok:
-            raise KeyError(f"Key {key!r} not found in index on {self.name!r}")
+        if key not in self._lookup or elem not in self.result_items(self._lookup[key]):
+            if not missing_ok:
+                raise KeyError(f"Key {key!r} not found in index on {self.name!r}")
+            return
+
+        self._unregister(key, elem)
     
     @abstractmethod
     def _unregister(self, key: Key, elem: Obj) -> None:

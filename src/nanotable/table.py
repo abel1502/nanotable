@@ -21,8 +21,8 @@ class Table[Elem, Indexes = _IndexDirectoryProxy[Elem], PrimaryIndex: Index[typi
     ### Storage
     
     The way a table stores its elements is defined by the chosen `Storage` subclass.
-    It controls whether the objects are unordered, retain the insertion order or
-    sorted; whether duplicates are allowed; if one of the fields acts as a primary
+    It controls whether the objects are iterated in any specific order;
+    whether duplicates are allowed; if one of the fields acts as a primary
     key; and so on. Check out `nanotable.storage` for existing implementations or
     if you want to implement your own.
     
@@ -30,6 +30,12 @@ class Table[Elem, Indexes = _IndexDirectoryProxy[Elem], PrimaryIndex: Index[typi
     In this case you can use an `IndexViewStorage`, which will make the chosen index act
     as the source of truth and the de-facto primary key for the table. You can also
     forego the storage parameter and simply use the `primary_key_on` method instead.
+    
+    .. Note::
+        Do not rely on any storage preserving insertion order. Due to the way atomicity for
+        overwrites is handled, this can be violated under certain circumstances even if the
+        underlying data structure preserves insertion order. If you need insertion order,
+        it is recommended to add a dedicated field with a sorted index instead.
     
     ### Indexes
     
@@ -316,40 +322,35 @@ class Table[Elem, Indexes = _IndexDirectoryProxy[Elem], PrimaryIndex: Index[typi
         """
         Adds an element to the table.
         
-        .. Note::
-            If `overwrite` is `True`, and an error happens while registering `elem`
-            with one of the indexes, the order of the elements can be changed.
-            Keep this in mind if you rely on the strict insertion order.
-        
         :param elem: The element to add.
-        :param overwrite: If `True`, overwrite the element if it already exists in the table.
+        :param overwrite: If `True`, overwrite elements with collisions on any unique keys.
         
         :raises ConflictError: If `overwrite` is `False` and the element has collisions on any indexed field.
         """
         
         with Transaction() as tx:
-            self._contents.add(elem)
-            tx.add_undo(partial(self._contents.remove, elem))
-            
             for index in self._indexes.values():
-                if overwrite:
+                try:
+                    index.register(elem)
+                except ConflictError:
+                    if not overwrite:
+                        raise
+                    
                     key = index.getfield(elem)
-                    if key in index:
-                        for other_elem in list(index.result_items(index[key])):
-                            self.remove(other_elem)
-                            tx.add_undo(partial(self.add, other_elem))
-                
-                index.register(elem)
+                    for other_elem in list(index.result_items(index[key])):
+                        self.remove(other_elem)
+                        tx.add_undo(partial(self.add, other_elem))
+                    
+                    index.register(elem)
                 tx.add_undo(partial(index.unregister, elem))
+            
+            self._contents.add(elem)
+            # Unnecessary as the final operation before the transaction commits
+            # tx.add_undo(partial(self._contents.remove, elem))
     
     def remove(self, elem: Elem, *, missing_ok: bool = False) -> None:
         """
         Remove an element from the table.
-        
-        .. Note::
-            If an error happens while unregistering `elem` from one of
-            the indexes, the order of the elements can be changed.
-            Keep this in mind if you rely on the strict insertion order.
         
         :param elem: The element to remove.
         :param missing_ok: If `False`, the element must exist in the table.
@@ -361,12 +362,12 @@ class Table[Elem, Indexes = _IndexDirectoryProxy[Elem], PrimaryIndex: Index[typi
             raise KeyError(f"Attempting to remove {elem!r} which is not in the table")
         
         with Transaction() as tx:
-            self._contents.remove(elem)
-            tx.add_undo(partial(self._contents.add, elem))
-            
             for index in self._indexes.values():
                 index.unregister(elem)
                 tx.add_undo(partial(index.register, elem))
+            
+            self._contents.remove(elem)
+            tx.add_undo(partial(self._contents.add, elem))
 
     def clear(self) -> None:
         """
@@ -383,7 +384,7 @@ class Table[Elem, Indexes = _IndexDirectoryProxy[Elem], PrimaryIndex: Index[typi
         Adds multiple elements to the table.
         
         :param items: The elements to add.
-        :param overwrite: If `True`, overwrite the elements that already exist in the table.
+        :param overwrite: If `True`, overwrite elements with collisions on any unique keys.
         """
         
         for item in items:
@@ -451,8 +452,12 @@ class Table[Elem, Indexes = _IndexDirectoryProxy[Elem], PrimaryIndex: Index[typi
         
         The order depends on the choice of storage. Unless you know otherwise,
         assume the order is unspecified.
-        
-        For a table with a unique primary key, the order will be the same as the insertion order.
+    
+        .. Note::
+            Do not rely on any storage preserving insertion order. Due to the way atomicity for
+            overwrites is handled, this can be violated under certain circumstances even if the
+            underlying data structure preserves insertion order. If you need insertion order,
+            it is recommended to add a dedicated field with a sorted index instead.
         
         :returns: An iterable over the elements of the table.
         """

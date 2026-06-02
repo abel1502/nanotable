@@ -38,8 +38,7 @@ class TestTable:
         table.remove(MyObject(1, "Foo"))
         assert len(table) == 2
         
-        # Doesn't overwrite with a MultiListStorage
-        table.add(MyObject(1, "Foo"), overwrite=True)
+        table.add(MyObject(1, "Foo"))
         assert len(table) == 3
         
         table.remove(MyObject(1, "Foo"))

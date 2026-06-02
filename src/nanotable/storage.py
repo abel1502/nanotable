@@ -12,7 +12,7 @@ class Storage[Obj](ABC, typing.Collection[Obj]):
     The base class for all storage implementations.
     
     A storage defines the semantics of how the elements of a table are stored
-    (whether a specific order is preserved, whether duplicates are allowed, etc.).
+    (whether elements are returned in a specific order, whether duplicates are allowed, etc.).
     """
     
     @abstractmethod
@@ -40,28 +40,30 @@ class Storage[Obj](ABC, typing.Collection[Obj]):
         """
     
     @abstractmethod
-    def add(self, obj: Obj, *, overwrite: bool = False) -> None:
+    def add(self, obj: Obj) -> None:
         """
         Adds an element to storage.
         
         :param obj: The element to add.
-        :param overwrite: If `True`, overwrite the element if it already exists in storage.
         
-        :raises ConflictError: If `overwrite` is `False` and the element already exists in storage.
+        :raises ConflictError: If the element already exists in storage.
         """
     
-    def add_many(self, objs: typing.Iterable[Obj], *, overwrite: bool = False) -> None:
+    def add_many(self, objs: typing.Iterable[Obj]) -> None:
         """
         Adds multiple elements to storage. The default implementation simply calls `add` for each element.
         
-        :param objs: The elements to add.
-        :param overwrite: If `True`, overwrite the elements that already exist in storage.
+        .. Note::
+            This operation is not atomic. If one element is conflicting,
+            the previous elements will have been added anyway.
         
-        :raises ConflictError: If `overwrite` is `False` and the elements already exist in storage.
+        :param objs: The elements to add.
+        
+        :raises ConflictError: If the elements already exist in storage.
         """
         
         for obj in objs:
-            self.add(obj, overwrite=overwrite)
+            self.add(obj)
     
     @abstractmethod
     def remove(self, obj: Obj, *, missing_ok: bool = False) -> None:
@@ -77,6 +79,10 @@ class Storage[Obj](ABC, typing.Collection[Obj]):
     def remove_many(self, objs: typing.Iterable[Obj], *, missing_ok: bool = False) -> None:
         """
         Removes multiple elements from storage. The default implementation simply calls `remove` for each element.
+        
+        .. Note::
+            This operation is not atomic. If one element is missing and `missing_ok` is `False`,
+            the previous elements will have been removed anyway.
         
         :param objs: The elements to remove.
         :param missing_ok: If `False`, the elements must exist in storage.
@@ -127,6 +133,9 @@ def _list_remove_last[Obj](lst: list[Obj], obj: Obj) -> None:
         
         del lst[i]
         return
+    else:  # pragma: no cover # This should never happen
+        # Our code always checks for presense before calling _list_remove_last
+        assert False, "_list_remove_last expected to find element"
 
 
 class ListStorage[Obj](WrapperStorage[Obj, list[Obj]]):
@@ -135,7 +144,8 @@ class ListStorage[Obj](WrapperStorage[Obj, list[Obj]]):
     
     - Preserves insertion order.
     - Does not allow duplicates.
-    - Presence checks, `add(overwrite=False)`, and `remove` are linear time.
+    - Duplicates among initial elements will raise a `ConflictError`.
+    - Presence checks, `add`, and `remove` are linear time.
     """
     
     def __init__(self, initial: typing.Iterable[Obj] = ()) -> None:
@@ -150,16 +160,18 @@ class ListStorage[Obj](WrapperStorage[Obj, list[Obj]]):
         super().__init__(val)
     
     @typing.override
-    def add(self, obj: Obj, *, overwrite: bool = False) -> None:
-        if not overwrite and obj in self._impl:
+    def add(self, obj: Obj) -> None:
+        if obj in self._impl:
             raise ConflictError(f"Element {obj!r} already exists in storage")
         
         self._impl.append(obj)
     
     @typing.override
     def remove(self, obj: Obj, *, missing_ok: bool = False) -> None:
-        if not missing_ok and obj not in self._impl:
-            raise KeyError(f"Element {obj!r} does not exist in storage")
+        if obj not in self._impl:
+            if not missing_ok:
+                raise KeyError(f"Element {obj!r} does not exist in storage")
+            return
         
         # Optimizing for the stack-like usage pattern, removal from the back
         _list_remove_last(self._impl, obj)
@@ -177,26 +189,21 @@ class MultiListStorage[Obj](WrapperStorage[Obj, list[Obj]]):
     - Removal removes the last occurrence.
     - Allows duplicates.
     - Presence checks and `remove` are linear time.
-    - `add(overwrite=True)` is not implemented. It will issue a warning and behave like `add(overwrite=False)`.
     """
     
     def __init__(self, initial: typing.Iterable[Obj] = ()) -> None:
         super().__init__(list(initial))
     
     @typing.override
-    def add(self, obj: Obj, *, overwrite: bool = False) -> None:
-        if overwrite:
-            warn(
-                "Overwriting elements is not well-defined for MultiListStorage. `overwrite=True` will be ignored. "
-                "If you wish to define a semantic for overwriting elements, consider subclassing `MultiListStorage`.",
-                UnsupportedOperationWarning,
-            )
+    def add(self, obj: Obj) -> None:
         self._impl.append(obj)
     
     @typing.override
     def remove(self, obj, *, missing_ok = False):
-        if not missing_ok and obj not in self._impl:
-            raise KeyError(f"Element {obj!r} does not exist in storage")
+        if obj not in self._impl:
+            if not missing_ok:
+                raise KeyError(f"Element {obj!r} does not exist in storage")
+            return
         
         _list_remove_last(self._impl, obj)
     
@@ -209,27 +216,30 @@ class SetStorage[Obj](WrapperStorage[Obj, set[Obj]]):
     """
     Stores objects in a `set`.
     
-    - Order is unspecified.
+    - Does not preserve insertion order.
     - Does not allow duplicates.
+    - Duplicates among initial elements will be silently ignored.
     - Requires objects to be hashable.
       - As a consequence, this **DOES NOT SUPPORT OBJECT MUTATIONS** except for identity-based hashables. If used incorrectly, it will break silently!
-    - All operations are constant time. (Except iteration and the like, obviously)
+    - All operations are constant time. (Except iteration and the like, obviously).
     """
     
     def __init__(self, initial: typing.Iterable[Obj] = ()) -> None:
         super().__init__(set(initial))
     
     @typing.override
-    def add(self, obj: Obj, *, overwrite: bool = False) -> None:
-        if not overwrite and obj in self._impl:
+    def add(self, obj: Obj) -> None:
+        if obj in self._impl:
             raise ConflictError(f"Element {obj!r} already exists in storage")
         
         self._impl.add(obj)
     
     @typing.override
     def remove(self, obj: Obj, *, missing_ok: bool = False) -> None:
-        if not missing_ok and obj not in self._impl:
-            raise KeyError(f"Element {obj!r} does not exist in storage")
+        if obj not in self._impl:
+            if not missing_ok:
+                raise KeyError(f"Element {obj!r} does not exist in storage")
+            return
         
         self._impl.discard(obj)
     
@@ -243,8 +253,9 @@ class OrderedSetStorage[Obj](WrapperStorage[Obj, dict[Obj, None]]):
     Stores objects in a `dict` with `None` keys. Makes use of the fact
     `dict`s preserve insertion order to implement a makeshift ordered set.
     
-    - Insertion order is preserved.
+    - Preserves insertion order.
     - Does not allow duplicates.
+    - Duplicates among initial elements will be silently ignored.
     - Requires objects to be hashable.
       - As a consequence, this **DOES NOT SUPPORT OBJECT MUTATIONS** except for identity-based hashables. If used incorrectly, it will break silently!
     - All operations are constant time. (Except iteration and the like, obviously)
@@ -254,16 +265,18 @@ class OrderedSetStorage[Obj](WrapperStorage[Obj, dict[Obj, None]]):
         super().__init__(dict.fromkeys(initial))
     
     @typing.override
-    def add(self, obj: Obj, *, overwrite: bool = False) -> None:
-        if not overwrite and obj in self._impl:
+    def add(self, obj: Obj) -> None:
+        if obj in self._impl:
             raise ConflictError(f"Element {obj!r} already exists in storage")
         
         self._impl[obj] = None
     
     @typing.override
     def remove(self, obj: Obj, *, missing_ok: bool = False) -> None:
-        if not missing_ok and obj not in self._impl:
-            raise KeyError(f"Element {obj!r} does not exist in storage")
+        if obj not in self._impl:
+            if not missing_ok:
+                raise KeyError(f"Element {obj!r} does not exist in storage")
+            return
         
         del self._impl[obj]
     
@@ -278,7 +291,7 @@ class IndexViewStorage[Obj](Storage[Obj]):
     accounted for by an index. Wraps an index created with `required=True`.
     `UniqueIndex` and subclasses are recommended, but any `Index` is supported.
     
-    - Order may or may not be preserved depending on the underlying index.
+    - May or may not preserve insertion order depending on the underlying index.
     - Duplicates may or may not be allowed depending on the underlying index.
     - Time complexity depends on the underlying index.
       For `UniqueIndex` and subclasses, all operations are constant time. (Except iteration and the like, obviously).
@@ -294,6 +307,9 @@ class IndexViewStorage[Obj](Storage[Obj]):
     writethrough: bool
     
     def __init__(self, index: Index[Obj]) -> None:
+        if not isinstance(index, Index):
+            raise TypeError(f"Expected an `Index`, got {type(index)} instead.")
+        
         if not index.required:
             raise TypeError("Only a `required=True` index may be used as a storage backend. Otherwise objects without the indexed field couldn't be accounted for.")
 
@@ -310,11 +326,16 @@ class IndexViewStorage[Obj](Storage[Obj]):
     
     @typing.override
     def __contains__(self, obj: object) -> bool:
+        # TODO: `has_object` on the index instead?
         key = self.index.getfield(typing.cast(Obj, obj))
-        return key is not MISSING and self.index.get(key) == obj
+        return (
+            key is not MISSING and
+            key in self.index and
+            obj in typing.cast(typing.Iterable[object], self.index.result_items(self.index[key]))
+        )
     
     @typing.override
-    def add(self, obj: Obj, *, overwrite: bool = False) -> None:
+    def add(self, obj: Obj) -> None:
         """
         See `Storage.add`.
         
@@ -325,13 +346,10 @@ class IndexViewStorage[Obj](Storage[Obj]):
         if not self.writethrough:
             return
         
-        if not overwrite and obj in self:
-            raise ConflictError(f"Element {obj!r} already exists in storage")
-        
         self.index.register(obj)
     
     @typing.override
-    def add_many(self, objs: typing.Iterable[Obj], *, overwrite: bool = False) -> None:
+    def add_many(self, objs: typing.Iterable[Obj]) -> None:
         """
         See `Storage.add_many`.
         
@@ -342,7 +360,7 @@ class IndexViewStorage[Obj](Storage[Obj]):
         if not self.writethrough:
             return
         
-        super().add_many(objs, overwrite=overwrite)
+        super().add_many(objs)
     
     @typing.override
     def remove(self, obj: Obj, *, missing_ok: bool = False) -> None:
@@ -413,11 +431,11 @@ class DummyStorage[Obj](Storage[Obj]):
         self._raise_error()
     
     @typing.override
-    def add(self, obj: Obj, *, overwrite: bool = False) -> None:
+    def add(self, obj: Obj) -> None:
         self._raise_error()
     
     @typing.override
-    def add_many(self, objs: typing.Iterable[Obj], *, overwrite: bool = False) -> None:
+    def add_many(self, objs: typing.Iterable[Obj]) -> None:
         self._raise_error()
     
     @typing.override
