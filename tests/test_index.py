@@ -8,6 +8,7 @@ import nanotable.index
 from nanotable.index import UniqueIndex, MultiIndex
 from nanotable.field import FieldGetter, getfield_item, getfield_attr
 from nanotable.errors import ConflictError
+import nanotable.safety
 from nanotable.safety import IndexedFieldChangedWarning
 
 
@@ -163,6 +164,27 @@ class TestUniqueIndex:
         with pytest.warns(IndexedFieldChangedWarning):
             # Note: keep this, otherwise a warning may show up at a random future point when `__del__` is called
             index.unregister_all()
+    
+    def test_silenced_safety_checks(self, recwarn: pytest.WarningsRecorder, monkeypatch: pytest.MonkeyPatch) -> None:
+        monkeypatch.setattr(nanotable.safety, "disable_safety_checks", True)
+        
+        index = self.create(required=True)
+        
+        obj = {"id": 1, "foo": "bar"}
+        index.register(obj)
+        
+        obj["id"] = 2
+        
+        index.get(1)
+        index[1]
+        
+        with pytest.raises(KeyError):
+            index[2]
+        
+        # Note: keep this, otherwise a warning may show up at a random future point when `__del__` is called
+        index.unregister_all()
+        
+        assert recwarn.list == []
     
     def test_mapping(self) -> None:
         index = self.create(required=True)

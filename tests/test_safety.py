@@ -11,7 +11,8 @@ from nanotable.errors import IndexedFieldChangedWarning
 def test_exports() -> None:
     exports = nanotable.safety.__all__
     
-    assert "disable_safety_checks" in exports
+    # Deliberately not exported, since importing it by value would prevent recognizing updates to it
+    assert "disable_safety_checks" not in exports
     assert "verify_immutable_key" in exports
 
 

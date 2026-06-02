@@ -26,6 +26,7 @@ def verify_immutable_key(
 
 
 __all__ = [
-    "disable_safety_checks",
+    # Deliberately not exported because importing it by value prevents recognizing updates to it
+    # "disable_safety_checks",
     "verify_immutable_key",
 ]

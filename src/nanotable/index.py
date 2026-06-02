@@ -5,7 +5,7 @@ import itertools
 
 from nanotable.field import FieldGetter, MISSING, typeof_MISSING
 from nanotable.errors import ConflictError
-from nanotable.safety import disable_safety_checks, verify_immutable_key
+import nanotable.safety
 
 
 # Long-term TODO: Factor out the code for storing stuff in a dict into a separate subclass?
@@ -152,10 +152,10 @@ class Index[
         Removes all elements from the index.
         """
         
-        if not disable_safety_checks:
+        if not nanotable.safety.disable_safety_checks:
             for key, result in self.items():
                 for obj in self.result_items(result):
-                    verify_immutable_key(key, self.getfield(obj), obj, self.name)
+                    nanotable.safety.verify_immutable_key(key, self.getfield(obj), obj, self.name)
         
         self._lookup.clear()
     
@@ -212,9 +212,9 @@ class Index[
             else:
                 result = self._lookup.get(key, args[0])
             
-        elif not disable_safety_checks:
+        elif not nanotable.safety.disable_safety_checks:
             for obj in self.result_items(result):
-                verify_immutable_key(key, self.getfield(obj), obj, self.name)
+                nanotable.safety.verify_immutable_key(key, self.getfield(obj), obj, self.name)
         
         return result
     
@@ -300,12 +300,12 @@ class Index[
     
     def __del__(self) -> None:  # pragma: no cover # A destructor like this is impossible to test naturally
         try:
-            if disable_safety_checks:
+            if nanotable.safety.disable_safety_checks:
                 return
             
             for key, result in self.items():
                 for obj in self.result_items(result):
-                    verify_immutable_key(key, self.getfield(obj), obj, self.name)
+                    nanotable.safety.verify_immutable_key(key, self.getfield(obj), obj, self.name)
         except:
             # Nothing is guaranteed for a destructor, so we can't guarantee anything either
             # In particular, I encountered situations where the index had no `_lookup` attribute
