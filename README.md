@@ -4,8 +4,6 @@
 [![PyPI - Python Version](https://img.shields.io/pypi/pyversions/nanotable.svg)](https://pypi.org/project/nanotable)
 [![codecov](https://codecov.io/gh/abel1502/nanotable/graph/badge.svg?token=ZVUHGZZMKZ)](https://codecov.io/gh/abel1502/nanotable)
 
-*This is a work in progress. Star/follow this repository to be notified of the first release.*
-
 Nanotable is meant to bridge the gap between simple collections, such as `list` and `dict`,
 and full-on database tables. It lets you store a set of objects, index it by
 several keys, and more! It's fast, memory-efficient, and well-tested.
