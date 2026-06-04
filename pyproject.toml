@@ -97,9 +97,9 @@ tests = ["tests", "*/nanotable/tests"]
 
 [tool.coverage.report]
 exclude_lines = [
-  "no cover",
+  "# pragma: no cover",
+  "# pragma: covered separately",  # We test all possible feature combinations, but the published coverage report includes only the run with everything enabled
   "if __name__ == .__main__.:",
   "if (typing\\.)?TYPE_CHECKING:",
   "^\\s*\\.\\.\\.\\s*($|#)",
-  "except ModuleNotFoundError:",  # We test all possible feature combinations, but the coverage report includes only the run with everything enabled
 ]

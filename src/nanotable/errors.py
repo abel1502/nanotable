@@ -17,12 +17,12 @@ class UnfinishedTableError(Exception):
     """
 
 
-class FeatureError(Exception):  # pragma: no cover # The coverage report doesn't include tests with disabled options
+class FeatureError(Exception):
     """
     An exception signaling that an extra necessary for a certain feature isn't installed
     """
     
-    def __init__(self, feature_name: str):
+    def __init__(self, feature_name: str):  # pragma: covered separately
         super().__init__(
             f"You need to install nanotable[{feature_name}] to use this feature",
         )

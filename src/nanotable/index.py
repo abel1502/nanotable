@@ -237,16 +237,16 @@ class Index[
         """
         Index-specific implementation for the behavior of `__getitem__` when the key is a slice.
         
-        Defaults to raising a `TypeError`.
+        Defaults to raising a `NotImplementedError`.
         
         :param keys: The slice to look up.
         
         :returns: The elements matching the lookup.
         
-        :raises TypeError: If the index does not support slicing.
+        :raises NotImplementedError: If the index does not support slicing.
         """
         
-        raise TypeError(f"Slicing not supported for {type(self).__name__}")
+        raise NotImplementedError(f"Slicing not supported for {type(self).__name__}")
     
     @typing.overload
     def __getitem__(self, keys: slice[Key | None, Key | None, None]) -> typing.Iterable[Obj]:
@@ -298,7 +298,7 @@ class Index[
         
         return self._lookup.items()
     
-    def __del__(self) -> None:  # pragma: no cover # A destructor like this is impossible to test naturally
+    def __del__(self) -> None:  # pragma: no cover # Destructors are impossible to test naturally
         try:
             if nanotable.safety.disable_safety_checks:
                 return
@@ -510,5 +510,5 @@ try:
         "SortedUniqueIndex",
         "SortedMultiIndex",
     ]
-except ModuleNotFoundError:
+except ModuleNotFoundError:  # pragma: covered separately
     pass

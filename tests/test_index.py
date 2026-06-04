@@ -211,7 +211,7 @@ class TestUniqueIndex:
     def test_no_slice(self) -> None:
         index = self.create(required=True)
         
-        with pytest.raises(TypeError):
+        with pytest.raises(NotImplementedError):
             index[:]
     
     def test_name_is_diagnostic_only(self) -> None:

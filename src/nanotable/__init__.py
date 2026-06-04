@@ -35,5 +35,5 @@ try:
         "SortedUniqueIndex",
         "SortedMultiIndex",
     ]
-except ModuleNotFoundError:
+except ModuleNotFoundError:  # pragma: covered separately
     pass

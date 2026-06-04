@@ -9,7 +9,8 @@ from nanotable.index import Index, UniqueIndex
 from nanotable.transaction import Transaction
 from nanotable.storage import Storage, DummyStorage, IndexViewStorage
 from nanotable.field import FieldGetterFactory, FieldGetter, getfield_attr, getfield_item, MISSING
-from nanotable.errors import ConflictError, FeatureError
+import nanotable.safety
+from nanotable.errors import ConflictError, FeatureError, IndexedFieldChangedWarning
 
 
 class Table[Elem, Indexes = _IndexDirectoryProxy[Elem], PrimaryIndex: Index[typing.Any] = Index[Elem]]:
@@ -32,9 +33,9 @@ class Table[Elem, Indexes = _IndexDirectoryProxy[Elem], PrimaryIndex: Index[typi
     forego the storage parameter and simply use the `primary_key_on` method instead.
     
     .. Note::
-        Do not rely on any storage preserving insertion order. Due to the way atomicity for
+        Be careful when relying on the storage to preserve insertion order. Due to the way atomicity for
         overwrites is handled, this can be violated under certain circumstances even if the
-        underlying data structure preserves insertion order. If you need insertion order,
+        underlying data structure preserves insertion order. If you need guaranteed insertion order,
         it is recommended to add a dedicated field with a sorted index instead.
     
     ### Indexes
@@ -214,7 +215,7 @@ class Table[Elem, Indexes = _IndexDirectoryProxy[Elem], PrimaryIndex: Index[typi
         if sorted:
             try:
                 from nanotable.index import SortedUniqueIndex
-            except ImportError:
+            except ImportError:  # pragma: covered separately
                 raise FeatureError("sorted")
             
             kind = SortedUniqueIndex
@@ -358,8 +359,10 @@ class Table[Elem, Indexes = _IndexDirectoryProxy[Elem], PrimaryIndex: Index[typi
         :raises KeyError: If `missing_ok` is `False` and the element does not exist in the table.
         """
         
-        if not missing_ok and elem not in self:
-            raise KeyError(f"Attempting to remove {elem!r} which is not in the table")
+        if elem not in self:
+            if not missing_ok:
+                raise KeyError(f"Attempting to remove {elem!r} which is not in the table")
+            return
         
         with Transaction() as tx:
             for index in self._indexes.values():
@@ -416,35 +419,57 @@ class Table[Elem, Indexes = _IndexDirectoryProxy[Elem], PrimaryIndex: Index[typi
         yield
         self.add(obj)
     
-    def rekey_on(self, obj: Elem, *fields: str) -> typing.Generator[None, None, None]:
+    @contextmanager
+    def rekey_on(self, obj: Elem, *indexes: str) -> typing.Generator[None, None, None]:
         """
         A context manager that allows to change values of indexed fields in a safe manner.
         
         This is a slightly more performant but more fragile version of `Table.rekey`.
         Instead of removing `obj` from the table fully, it only unregisters it
-        from the indexes on specified `fields`. Accordingly, it is only safe to change
-        the indexed fields passed as arguments to `rekey_on` in the `with` block of
+        from the specified indexes. Accordingly, it is only safe to change
+        the indexed fields corresponding to arguments to `rekey_on` in the `with` block of
         this function.
         
         .. Note::
             See the documentation for `Table.rekey` for why this is needed.
         
+        .. Note::
+            While normally index names are the same as the field they index,
+            this may not be the case if you use a custom `getfield` function
+            (for example to create an index on a nested field or on several fields
+            at once). In that case, it is important to include the **names** of the
+            relevant indexes. If you forget any, you risk subtle data corruption.
+            If safety checks are not disabled, this method will issue a warning
+            if it detects changes on any of the missing indexes.
+        
         :param obj: The object whose fields you want to change.
-        :param fields: The fields whose values you want to change.
+        :param indexes: The names of the indexes which will be affected by the change.
         
         :returns: A context manager (to be used in a `with` block).
         
         :raises KeyError: If the object is not in the table.
         """
         
-        for field in fields:
-            self._indexes[field].unregister(obj)
+        old_fields: dict[str, typing.Any] = {}
+        if not nanotable.safety.disable_safety_checks:
+            for index in self._indexes.values():
+                if index.name in indexes:
+                    continue
+                old_fields[index.name] = index.getfield(obj)
+        
+        for index_name in indexes:
+            self._indexes[index_name].unregister(obj)
         
         yield
         
-        for field in fields:
-            self._indexes[field].register(obj)
+        for index_name in indexes:
+            self._indexes[index_name].register(obj)
         
+        # No need for a second `disable_safety_checks` test,
+        # since if it's off, `old_fields` will be empty
+        for index_name, old_value in old_fields.items():
+            new_value = self._indexes[index_name].getfield(obj)
+            nanotable.safety.verify_immutable_key(old_value, new_value, obj, index_name)
     
     def __iter__(self) -> typing.Iterator[Elem]:
         """
@@ -454,9 +479,9 @@ class Table[Elem, Indexes = _IndexDirectoryProxy[Elem], PrimaryIndex: Index[typi
         assume the order is unspecified.
     
         .. Note::
-            Do not rely on any storage preserving insertion order. Due to the way atomicity for
+            Be careful when relying on the storage to preserve insertion order. Due to the way atomicity for
             overwrites is handled, this can be violated under certain circumstances even if the
-            underlying data structure preserves insertion order. If you need insertion order,
+            underlying data structure preserves insertion order. If you need guaranteed insertion order,
             it is recommended to add a dedicated field with a sorted index instead.
         
         :returns: An iterable over the elements of the table.
