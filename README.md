@@ -1,8 +1,8 @@
 # nanotable
 
-[![PyPI - Version](https://img.shields.io/pypi/v/nanotable.svg)](https://pypi.org/project/nanotable)
-[![PyPI - Python Version](https://img.shields.io/pypi/pyversions/nanotable.svg)](https://pypi.org/project/nanotable)
-[![codecov](https://codecov.io/gh/abel1502/nanotable/graph/badge.svg?token=ZVUHGZZMKZ)](https://codecov.io/gh/abel1502/nanotable)
+[![PyPI - Version](https://img.shields.io/pypi/v/nanotable.svg?cache-control=no-cache)](https://pypi.org/project/nanotable)
+[![PyPI - Python Version](https://img.shields.io/pypi/pyversions/nanotable.svg?cache-control=no-cache)](https://pypi.org/project/nanotable)
+[![codecov](https://codecov.io/gh/abel1502/nanotable/graph/badge.svg?token=ZVUHGZZMKZ?cache-control=no-cache)](https://codecov.io/gh/abel1502/nanotable)
 
 Nanotable is meant to bridge the gap between simple collections, such as `list` and `dict`,
 and full-on database tables. It lets you store a set of objects, index it by
