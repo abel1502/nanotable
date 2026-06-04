@@ -22,7 +22,7 @@ def test_exports() -> None:
 @dataclasses.dataclass()
 class MyObject:
     id: int
-    name: str
+    name: str | None
     something_incomprehensible: typing.Any = None
 
 
@@ -220,7 +220,7 @@ class TestTable:
         table = Table(of=MyObject).primary_index_on("id").index_on("name")
         
         table.add(MyObject(1, "Foo"))
-        table.add(MyObject(2, None))
+        table.add(MyObject(2, None))  # Note that None is treated as MISSING by default
         
         assert len(table) == 2
         
@@ -335,7 +335,7 @@ class TestTable:
     def test_sorted_primary_index(self):
         has_sorted: bool
         try:
-            import sortedcontainers
+            import sortedcontainers  # type: ignore[import-not-found]
             has_sorted = True
             del sortedcontainers
         except ImportError:
