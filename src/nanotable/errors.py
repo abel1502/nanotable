@@ -22,7 +22,7 @@ class FeatureError(Exception):
     An exception signaling that an extra necessary for a certain feature isn't installed
     """
     
-    def __init__(self, feature_name: str):  # pragma: covered separately
+    def __init__(self, feature_name: str):
         super().__init__(
             f"You need to install nanotable[{feature_name}] to use this feature",
         )

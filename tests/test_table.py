@@ -338,11 +338,11 @@ class TestTable:
             import sortedcontainers
             has_sorted = True
             del sortedcontainers
-        except ImportError:  # pragma: covered separately
+        except ImportError:
             has_sorted = False
         
-        if not has_sorted:  # pragma: covered separately
-            with pytest.raises(FeatureError, match=r"^sorted$"):
+        if not has_sorted:
+            with pytest.raises(FeatureError, match=r"nanotable\[sorted\]"):
                 Table(of=MyObject).primary_index_on("id", sorted=True)
             return
         

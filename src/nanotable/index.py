@@ -510,5 +510,5 @@ try:
         "SortedUniqueIndex",
         "SortedMultiIndex",
     ]
-except ModuleNotFoundError:  # pragma: covered separately
+except ImportError:
     pass

@@ -215,7 +215,7 @@ class Table[Elem, Indexes = _IndexDirectoryProxy[Elem], PrimaryIndex: Index[typi
         if sorted:
             try:
                 from nanotable.index import SortedUniqueIndex
-            except ImportError:  # pragma: covered separately
+            except ImportError:
                 raise FeatureError("sorted")
             
             kind = SortedUniqueIndex

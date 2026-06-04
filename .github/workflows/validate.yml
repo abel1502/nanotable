@@ -35,5 +35,12 @@ jobs:
       - name: Type-check
         run: uvx hatch run dev-ci:type-check
 
-      - name: Test
-        run: uvx hatch run dev-ci:test
+      - name: Test and record coverage
+        run: |
+          rm -f coverage.xml
+          uvx hatch run dev-ci:test --cov --cov-branch --cov-report=xml --cov-append
+
+      - name: Upload coverage reports to Codecov
+        uses: codecov/codecov-action@v5
+        with:
+          token: ${{ secrets.CODECOV_TOKEN }}
