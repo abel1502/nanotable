@@ -2,8 +2,7 @@
 
 [![PyPI - Version](https://img.shields.io/pypi/v/nanotable.svg)](https://pypi.org/project/nanotable)
 [![PyPI - Python Version](https://img.shields.io/pypi/pyversions/nanotable.svg)](https://pypi.org/project/nanotable)
-
-[TODO: Code coverage report]
+[![codecov](https://codecov.io/gh/abel1502/nanotable/graph/badge.svg?token=ZVUHGZZMKZ)](https://codecov.io/gh/abel1502/nanotable)
 
 *This is a work in progress. Star/follow this repository to be notified of the first release.*
 
