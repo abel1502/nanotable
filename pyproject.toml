@@ -36,6 +36,9 @@ sorted = [
   "sortedcontainers>=2.4.0",
   "sortedcontainers-stubs>=2.4.3",
 ]
+all = [
+  "nanotable[sorted]",
+]
 
 [dependency-groups]
 dev = [

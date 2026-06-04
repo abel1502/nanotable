@@ -34,6 +34,12 @@ There are several situations where you might want to use Nanotable:
 pip install nanotable
 ```
 
+To install with all extras features, instead use:
+
+```console
+pip install nanotable[all]
+```
+
 ## Usage
 
 A basic usage example is given below:
@@ -56,12 +62,15 @@ table.by.phone["987-654-3210"]  # {"name": "Jane Doe", "phone": "987-654-3210", 
 table.remove(table.by.name["Barrack Obama"])
 ```
 
-You can store any kind of object in the table. Specify `of_dicts=True` or `getfield=getfield_item`
+You can store any kind of object in the table. Specify `of_dicts=True` or `getfield_factory=getfield_item`
 to use mappings (`dict` or anything with `obj[key]` item access); `of_objects=True` or
-`getfield=getfield_attr` to use objects with attributes (`obj.key` access); or
-any function with the signature `(obj, key: str) -> Any | MISSING` as `getfield`.
+`getfield_factory=getfield_attr` to use objects with attributes (`obj.key` access); or
+any function with the signature `(obj: Any, key: str) -> Any | MISSING` as `getfield_factory`.
 You can also specify `of=MyType` to have the table infer either `of_objects` or `of_dicts`
 based on the anticipated element type.
+
+Check out the documentation for `nanotable.Table` to see all the methods supported
+by tables.
 
 ### Typing
 
@@ -91,13 +100,104 @@ table.index_on("phone")
 
 ### Indexes
 
-TODO: UniqueIndex, MultiIndex
+Indexes are used to provide fast and efficient lookup of elements by the
+value of one of the fields. All indexes must inherit from `nanotable.Index`.
+If you wish to implement your own, consult the documentation of that class
+to see which methods you need to implement.
 
-TODO: `[sorted]` extra and SortedUniqueIndex, SortedMultiIndex
+Broadly, the interface of an index consists of:
+- `register`, which adds an element to the index
+- `unregister`, which removes an element from the index
+- `get`, which returns the element or elements corresponding to the key
+  (the type of the result depends on the specific index, but it is always
+  semantically equivalent to a collection of stored objects, and can be
+  transformed to a list with `result_items`).
+- `[]` item lookup, which is a shortcut for `get` and the most frequent operation
+  you will likely perform while using an index.
+- More utility methods, which you can find by exploring the index documentation.
+
+Any index can be required or not, which is controlled by the `required`
+boolean parameter. A required index will raise an error when encounering an
+object with no value for its field. If an index is not required, it will
+simply ignore such objects. By default, `None` will be considered missing, but
+you may override this by setting `none_means_empty=False`, in which case `None`
+will be treated as a regular value.
+
+An index has a name, which should correspond to the field it indexes. However,
+indexes rely on a customizable `getfield` function to extract the field value,
+which allows indexes on properties that would not be considered fields in a
+conventional way: for example, a tuple of several fields, or a nested field.
+In this case the name should convey the same information to a human, but it
+is important not to treat it as a source of truth. `getfield` is a function
+with the signature `(obj: Any) -> Any | MISSING`. When defining your own `getfield`,
+remember to return `nanotable.MISSING` instead of `None` or raising exceptions
+when the provided object does not have the required fields (for example when
+it's of the wrong type).
+
+Any `required=True` index can be used as a primary index for a table, though
+a `UniqueIndex` (or one of its subclasses) is recommended.
+
+Nanotable provides the following types of indexes out of the box:
+
+- `nanotable.UniqueIndex`. Requires that no two elements in the table share
+  the same value for the index field. Lookups return the only element with the
+  specified value, or raise a `KeyError` if there is none. The values of the
+  indexed field must be hashable.
+
+- `nanotable.MultiIndex`. Supports duplicate values for the index field.
+  Lookups return a `list` of all elements with a given value for the index field,
+  including potentially an empty list. The values of the
+  indexed field must be hashable.
+
+With the `sorted` extra installed (`pip install nanotable[sorted]`), you will
+also have access to the following indexes:
+
+- `nanotable.SortedUniqueIndex`. Has the same requirements as `UniqueIndex`,
+  but maintains elements in sorted order of their indexed field. Beside
+  single-item lookups, provides efficient range lookups with `get_range` and
+  `[low:high]`. The values of the indexed field must be hashable and comparable.
+
+- `nanotable.SortedMultiIndex`. Has the same requirements as `MultiIndex`,
+  but maintains elements in sorted order of their indexed field. Beside
+  `list` lookups, provides efficient range lookups with `get_range` and
+  `[low:high]`. The values of the indexed field must be hashable and comparable.
 
 ### Storage
 
-TODO
+Storage is what holds the elements of the table. In a sense, it simply abstracts
+a collection with a consistent interface. All storage implementations
+must inherit from `nanotable.Storage`. If you wish to implement your own,
+consult the documentation of that class and `nanotable.WrapperStorage` to see
+which methods you need to implement.
+
+If your table uses a primary index, it does not need a storage and will
+use the index for that purpose. (Unlike a conventional database, since Python
+already stores objects by-reference, our indexes have access to the objects
+themselves rather than indexes to the storage). Note that this is the only
+difference between a primary and a regular index. If you want to use a
+custom storage, you do not need to (and cannot) specify a primary index.
+
+Nanotable provides the following types of storage out of the box:
+
+- `nanotable.ListStorage`. Stores items in a `list`, prohibiting duplicates.
+  Preserves insertion order. Linear time for mutation and presence checks.
+
+- `nanotable.MultiListStorage`. Stores items in a `list` but allows duplicates.
+  Preserves insertion order. Linear time for mutation and presence checks.
+
+- `nanotable.SetStorage`. Stores items in a `set`, prohibiting duplicates.
+  Does not preserve insertion order. O(1) time for mutation and presence checks.
+  Requires objects to be hashable.
+
+- `nanotable.OrderedSetStorage`. Stores items in a `dict` with `None`-values,
+  essentially emulating a set but making use of Python 3.6+ `dict`'s ordered
+  nature. Preserves insertion order. O(1) time for mutation and presence checks.
+  Requires objects to be hashable.
+
+- `nanotable.IndexViewStorage`. Relies on some kind of index to store items.
+  Semantics depend on index semantics, but for all built-in indexes, the
+  performance is O(1) time for mutation and presence checks. This is used
+  automatically when you define a primary index for a table.
 
 ### Caveats
 
