@@ -5,8 +5,7 @@ on:
     inputs:
       revision:
         description: Git revision to validate
-        required: true
-        default: master
+        required: false
         type: string
   workflow_call:
     inputs:
@@ -26,7 +25,7 @@ jobs:
       - name: Checkout revision
         uses: actions/checkout@v5
         with:
-          ref: ${{ inputs.revision }}
+          ref: ${{ inputs.revision || github.ref }}
 
       - name: Set up uv and Python
         uses: astral-sh/setup-uv@v7
