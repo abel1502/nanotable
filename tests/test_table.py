@@ -332,7 +332,7 @@ class TestTable:
         monkeypatch.setattr(nanotable.safety, "disable_safety_checks", True)
         table.clear()
     
-    def test_sorted_primary_index(self):
+    def test_sorted_primary_index(self) -> None:
         has_sorted: bool
         try:
             import sortedcontainers  # type: ignore[import-not-found]

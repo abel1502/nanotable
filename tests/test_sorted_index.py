@@ -158,5 +158,26 @@ class TestSortedMultiIndex:
         
         assert isinstance(index, nanotable.index.MultiIndex)
     
-    # TODO: Tests
+    def test_sorted(self) -> None:
+        index = self.create()
+        
+        index.register({"id": 3, "foo": "bar"})
+        index.register({"id": 1})
+        index.register({"id": 3})
+        index.register({"id": 2})
+        
+        assert list(index.keys()) == [1, 2, 3]
+        assert list(index.objects()) == [{"id": 1}, {"id": 2}, {"id": 3}, {"id": 3, "foo": "bar"}] \
+            or list(index.objects()) == [{"id": 1}, {"id": 2}, {"id": 3, "foo": "bar"}, {"id": 3}]
+    
+    def test_slice_range_access(self) -> None:
+        index = self.create()
+        
+        for i in range(1, 6):
+            index.register({"id": i})
+        
+        assert list(index[2:4]) == [{"id": 2}, {"id": 3}]
+        assert list(index[2:]) == [{"id": 2}, {"id": 3}, {"id": 4}, {"id": 5}]
+        assert list(index[:4]) == [{"id": 1}, {"id": 2}, {"id": 3}]
+        assert list(index[:]) == [{"id": 1}, {"id": 2}, {"id": 3}, {"id": 4}, {"id": 5}]
 
