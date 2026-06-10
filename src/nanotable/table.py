@@ -4,13 +4,15 @@ import types
 from contextlib import contextmanager
 from functools import partial
 import copy
+import itertools
+from types import EllipsisType
 
 from nanotable.index import Index, UniqueIndex
 from nanotable.transaction import Transaction
 from nanotable.storage import Storage, DummyStorage, IndexViewStorage
 from nanotable.field import FieldGetterFactory, FieldGetter, getfield_attr, getfield_item, MISSING
 import nanotable.safety
-from nanotable.errors import ConflictError, FeatureError, IndexedFieldChangedWarning
+from nanotable.errors import ConflictError, FeatureError
 
 
 class Table[Elem, Indexes = _IndexDirectoryProxy[Elem], PrimaryIndex: Index[typing.Any] = Index[Elem]]:
@@ -502,6 +504,12 @@ class Table[Elem, Indexes = _IndexDirectoryProxy[Elem], PrimaryIndex: Index[typi
         """
         
         return item in self._contents
+    
+    def __repr__(self) -> str:
+        preview: list[Elem | EllipsisType] = list(itertools.islice(self, 6))
+        if len(preview) >= 6:
+            preview[-1] = ...
+        return f"Table({', '.join(repr(elem) for elem in preview)})"
 
 
 class _IndexDirectoryProxy[Elem]:
