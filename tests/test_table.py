@@ -356,4 +356,24 @@ class TestTable:
         assert list(table.at) == [1, 2, 3]
         
         assert list(table) == [MyObject(1, "Foo"), MyObject(2, "Bar"), MyObject(3, "Baz")]
+    
+    def test_repr(self) -> None:
+        table = Table(of=MyObject).primary_index_on("id")
+        
+        assert repr(table) == "Table()"
+        
+        table.add(MyObject(1, "Foo 1"))
+        
+        assert repr(table) == "Table(MyObject(id=1, name='Foo 1', something_incomprehensible=None))"
+        
+        for i in range(2, 6):
+            table.add(MyObject(i, f"Foo {i}"))
+        
+        assert repr(table) == f"Table({', '.join(repr(MyObject(id=i, name=f'Foo {i}', something_incomprehensible=None)) for i in range(1, 6))})"
+        
+        table.add(MyObject(7, "Foo 7"))
+        
+        assert repr(table) == f"Table({', '.join(repr(MyObject(id=i, name=f'Foo {i}', something_incomprehensible=None)) for i in range(1, 6))}, ...)"
+        
+        
 

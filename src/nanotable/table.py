@@ -5,7 +5,6 @@ from contextlib import contextmanager
 from functools import partial
 import copy
 import itertools
-from types import EllipsisType
 
 from nanotable.index import Index, UniqueIndex
 from nanotable.transaction import Transaction
@@ -506,10 +505,10 @@ class Table[Elem, Indexes = _IndexDirectoryProxy[Elem], PrimaryIndex: Index[typi
         return item in self._contents
     
     def __repr__(self) -> str:
-        preview: list[Elem | EllipsisType] = list(itertools.islice(self, 6))
+        preview: list[str] = list(map(repr, itertools.islice(self, 6)))
         if len(preview) >= 6:
-            preview[-1] = ...
-        return f"Table({', '.join(repr(elem) for elem in preview)})"
+            preview[-1] = "..."
+        return f"Table({', '.join(preview)})"
 
 
 class _IndexDirectoryProxy[Elem]:
