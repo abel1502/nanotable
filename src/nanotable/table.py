@@ -14,6 +14,7 @@ import nanotable.safety
 from nanotable.errors import ConflictError, FeatureError
 
 
+# TODO: Explicit table schema instead
 class Table[Elem, Indexes = _IndexDirectoryProxy[Elem], PrimaryIndex: Index[typing.Any] = Index[Elem]]:
     """
     A `Table` stores a collection of Python objects and indexes on them.
