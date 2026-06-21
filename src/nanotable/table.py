@@ -14,7 +14,9 @@ import nanotable.safety
 from nanotable.errors import ConflictError, FeatureError
 
 
-# TODO: Explicit table schema instead
+# TODO: Explicit table schema instead. Probably use like `table(schema)(<initial values>)`.
+#       Also allow autogenerating a source file with the table definition for static typecheckers and better performance.
+#       May be a type-stub, but may also be a reified type with an isinstance hook and everything.
 class Table[Elem, Indexes = _IndexDirectoryProxy[Elem], PrimaryIndex: Index[typing.Any] = Index[Elem]]:
     """
     A `Table` stores a collection of Python objects and indexes on them.
