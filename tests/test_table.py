@@ -378,7 +378,7 @@ class TestTable:
     def test_eq(self) -> None:
         table1 = Table(of=MyObject).primary_index_on("id")
         table2 = Table(of=MyObject).primary_index_on("id")
-        table3 = Table(of_dicts=True).primary_index_on("id")
+        table3 = Table[dict[str, typing.Any]](of_dicts=True).primary_index_on("id")
         
         assert table1 == table2
         # assert table1 != table3  # Actually equal while empty
