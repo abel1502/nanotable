@@ -507,6 +507,12 @@ class Table[Elem, Indexes = _IndexDirectoryProxy[Elem], PrimaryIndex: Index[typi
         
         return item in self._contents
     
+    def __eq__(self, other: object) -> bool:
+        if not isinstance(other, Table):
+            return NotImplemented
+        
+        return self._contents == other._contents
+    
     def __repr__(self) -> str:
         preview: list[str] = list(map(repr, itertools.islice(self, 6)))
         if len(preview) >= 6:

@@ -169,6 +169,13 @@ class TestAnyStorage:
         storage.add_many([123, 456])
         
         assert list(storage) == [123, 456, 123, 123, 456]
+    
+    def test_eq(self, factory: StorageFactory[int]) -> None:
+        assert factory([123]) == factory([123])
+        assert factory([123]) != factory([456])
+        
+        if factory != ListStorage:
+            assert factory([123]) != ListStorage([123])
 
 
 def test_initialization_duplicates() -> None:
@@ -214,6 +221,9 @@ def test_dummy_storage() -> None:
     
     with pytest.raises(UnfinishedTableError):
         storage.clear()
+    
+    assert storage == DummyStorage[int]()
+    assert storage != ListStorage[int]()
 
 
 class TestIndexViewStorage:

@@ -374,6 +374,47 @@ class TestTable:
         table.add(MyObject(7, "Foo 7"))
         
         assert repr(table) == f"Table({', '.join(repr(MyObject(id=i, name=f'Foo {i}', something_incomprehensible=None)) for i in range(1, 6))}, ...)"
+    
+    def test_eq(self) -> None:
+        table1 = Table(of=MyObject).primary_index_on("id")
+        table2 = Table(of=MyObject).primary_index_on("id")
+        table3 = Table(of_dicts=True).primary_index_on("id")
+        
+        assert table1 == table2
+        # assert table1 != table3  # Actually equal while empty
+        
+        table1.add(MyObject(1, "Foo 1"))
+        table2.add(MyObject(1, "Foo 1"))
+        
+        assert table1 == table2
+        assert table1 != table3
+        
+        table3.add({"id": 1, "name": "Foo 1"})
+        
+        assert table1 != table3
+        assert table2 != table3
+        
+        obj: MyObject = table1.at[1]
+        with table1.rekey(obj):
+            obj.name = "Foo 2"
+        
+        assert table1 != table2
+        assert table1 != table3
+        
+        # Tables are only compared to tables
+        assert table1 != [obj]
+        
+        table4 = Table(MultiListStorage(), of=MyObject)
+        table4.add(obj)
+        
+        # Different storages are a priori unequal
+        assert table1 != table4
+        
+        table5 = Table(MultiListStorage(), of=MyObject)
+        table5.add(MyObject(1, "Foo 2"))
+        
+        assert table4 == table5
+        
         
         
 

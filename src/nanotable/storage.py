@@ -40,6 +40,14 @@ class Storage[Obj](ABC, typing.Collection[Obj]):
         """
     
     @abstractmethod
+    def __eq__(self, other: object) -> bool:
+        """
+        Returns whether the storage is equal to another storage.
+        
+        :returns: `True` if the storage is equal to the other storage. `NotImplemented` if the types differ.
+        """
+    
+    @abstractmethod
     def add(self, obj: Obj) -> None:
         """
         Adds an element to storage.
@@ -124,6 +132,13 @@ class WrapperStorage[Obj, Impl: typing.Collection[typing.Any]](Storage[Obj]):
     @typing.override
     def __contains__(self, obj: object) -> bool:
         return obj in self._impl
+    
+    @typing.override
+    def __eq__(self, other: object) -> bool:
+        if not isinstance(other, type(self)):
+            return NotImplemented
+        
+        return self._impl == other._impl
 
 
 def _list_remove_last[Obj](lst: list[Obj], obj: Obj) -> None:
@@ -335,6 +350,13 @@ class IndexViewStorage[Obj](Storage[Obj]):
         )
     
     @typing.override
+    def __eq__(self, other: object) -> bool:
+        if not isinstance(other, type(self)):
+            return NotImplemented
+        
+        return self.index == other.index
+    
+    @typing.override
     def add(self, obj: Obj) -> None:
         """
         See `Storage.add`.
@@ -429,6 +451,13 @@ class DummyStorage[Obj](Storage[Obj]):
     @typing.override
     def __contains__(self, obj: object) -> bool:
         self._raise_error()
+    
+    @typing.override
+    def __eq__(self, other: object) -> bool:
+        if not isinstance(other, type(self)):
+            return NotImplemented
+        
+        return True
     
     @typing.override
     def add(self, obj: Obj) -> None:
